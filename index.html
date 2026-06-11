@@ -54,6 +54,20 @@
     padding: 10px 18px; font-size: 15px; cursor: pointer;
   }
   .controls button:hover { background: #2f343d; }
+  .switch { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; color: var(--muted); font-size: 14px; }
+  .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .switch .track {
+    width: 44px; height: 24px; border-radius: 999px;
+    background: #343a44; transition: background .18s ease; flex: none; position: relative;
+  }
+  .switch .thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #fff; transition: transform .18s ease;
+  }
+  .switch input:checked + .track { background: var(--accent); }
+  .switch input:checked + .track .thumb { transform: translateX(20px); }
+  .switch input:focus-visible + .track { box-shadow: 0 0 0 3px rgba(232,89,12,.4); }
   .hint { color: var(--muted); font-size: 13px; text-align: center; max-width: 560px; line-height: 1.5; }
   .midi { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
   .midi .dot { width: 9px; height: 9px; border-radius: 50%; background: #555; }
@@ -89,6 +103,12 @@
     <button id="next">Next →</button>
     <button id="dir" title="Toggle direction of 'next'">↑ Ascending 4ths</button>
   </div>
+
+  <label class="switch">
+    <input type="checkbox" id="show-kb" checked />
+    <span class="track"><span class="thumb"></span></span>
+    <span class="switch-text">Show chord on keyboard</span>
+  </label>
 
   <div class="midi" id="midi">
     <span class="dot"></span>
@@ -196,6 +216,10 @@
   dirBtn.addEventListener("click", () => {
     dir = -dir;
     dirBtn.textContent = dir === 1 ? "↑ Ascending 4ths" : "↓ Descending 5ths";
+  });
+
+  document.getElementById("show-kb").addEventListener("change", (e) => {
+    pianoEl.style.display = e.target.checked ? "" : "none";
   });
 
   document.querySelectorAll(".tabs button").forEach((btn) => {
