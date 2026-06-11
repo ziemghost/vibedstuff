@@ -122,14 +122,33 @@
   const CYCLES = { maj7: MAJ7, m7: M7, all: MAJ7.concat(M7) };
 
   // ----- State ------------------------------------------------------------
+  const LOW  = 60;          // C4 — the fixed left-hand note, same for every chord
+  const HIGH = LOW + 24;    // two full octaves up to C6 (inclusive)
+
   let list = CYCLES.maj7;
   let idx = 0;
   let piano = null;
+  let active = [];          // currently highlighted MIDI notes
 
   const nameEl    = document.getElementById("name");
   const notesEl   = document.getElementById("notes");
   const counterEl = document.getElementById("counter");
   const pianoEl   = document.getElementById("piano");
+
+  // Build the (fixed) two-octave keyboard once.
+  if (typeof Nexus === "undefined") {
+    pianoEl.textContent = "Could not load the keyboard library (check your internet connection).";
+    pianoEl.style.color = "var(--muted)";
+  } else {
+    piano = new Nexus.Piano(pianoEl, {
+      size: [780, 150],
+      mode: "button",
+      lowNote: LOW,
+      highNote: HIGH,
+    });
+    piano.colorize("accent", getComputedStyle(document.documentElement)
+                              .getPropertyValue("--accent").trim());
+  }
 
   function render() {
     const c = list[idx];
@@ -137,27 +156,13 @@
     notesEl.textContent   = c.notes;
     counterEl.textContent = (idx + 1) + " / " + list.length;
 
-    if (typeof Nexus === "undefined") {
-      pianoEl.textContent = "Could not load the keyboard library (check your internet connection).";
-      pianoEl.style.color = "var(--muted)";
-      return;
-    }
+    if (!piano) return;
 
-    // Rebuild a one-octave keyboard rooted at this chord's root.
-    if (piano) piano.destroy();
-    pianoEl.innerHTML = "";
-
-    const root = 60 + c.pc;                 // root in octave 4
-    piano = new Nexus.Piano(pianoEl, {
-      size: [520, 140],
-      mode: "button",
-      lowNote: root,
-      highNote: root + 12,                  // inclusive -> full single octave
-    });
-    piano.colorize("accent", getComputedStyle(document.documentElement)
-                              .getPropertyValue("--accent").trim());
-
-    INTERVALS[c.q].forEach((i) => piano.toggleKey(root + i, true));
+    // Clear the previous chord, then light up this one in root position.
+    active.forEach((k) => piano.toggleKey(k, false));
+    const root = LOW + c.pc;                       // root in the first (C-based) octave
+    active = INTERVALS[c.q].map((i) => root + i);  // root, 3rd/♭3rd, 5th, 7th
+    active.forEach((k) => piano.toggleKey(k, true));
   }
 
   function next() { idx = (idx + 1) % list.length; render(); }
