@@ -58,6 +58,11 @@
   .midi { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
   .midi .dot { width: 9px; height: 9px; border-radius: 50%; background: #555; }
   .midi.on .dot { background: #37b24d; }
+  .midi select {
+    background: #262a32; color: var(--fg);
+    border: 1px solid #343a44; border-radius: 8px;
+    padding: 4px 8px; font-size: 13px; font-family: inherit; cursor: pointer;
+  }
   kbd {
     background: #262a32; border: 1px solid #3a4049; border-bottom-width: 2px;
     border-radius: 6px; padding: 1px 7px; font-size: 12px; font-family: inherit; color: var(--fg);
@@ -84,7 +89,11 @@
     <button id="next">Next →</button>
   </div>
 
-  <div class="midi" id="midi"><span class="dot"></span><span id="midi-text">Looking for MIDI…</span></div>
+  <div class="midi" id="midi">
+    <span class="dot"></span>
+    <span id="midi-text">Looking for MIDI…</span>
+    <select id="midi-select" style="display:none"></select>
+  </div>
 
   <div class="hint">
     Play the highlighted chord on your MIDI keyboard (any octave/voicing) to advance automatically.<br />
@@ -199,7 +208,13 @@
   // ----- MIDI input -------------------------------------------------------
   const midiEl     = document.getElementById("midi");
   const midiTextEl = document.getElementById("midi-text");
+  const selectEl   = document.getElementById("midi-select");
   const held = new Set();   // pitch classes (0–11) currently held down
+
+  selectEl.addEventListener("change", () => {
+    listenTo(WebMidi.getInputById(selectEl.value));
+    setMidiStatus(true, "Listening to");
+  });
 
   function targetPcs() {
     const c = list[idx];
@@ -225,9 +240,20 @@
   }
   function onNoteOff(e) { held.delete(e.note.number % 12); }
 
-  function attachInput(input) {
-    input.addListener("noteon", onNoteOn);
-    input.addListener("noteoff", onNoteOff);
+  let currentInput = null;
+
+  // Listen to exactly one input at a time; detach the previous one first.
+  function listenTo(input) {
+    if (currentInput) {
+      currentInput.removeListener("noteon", onNoteOn);
+      currentInput.removeListener("noteoff", onNoteOff);
+    }
+    held.clear();
+    currentInput = input || null;
+    if (currentInput) {
+      currentInput.addListener("noteon", onNoteOn);
+      currentInput.addListener("noteoff", onNoteOff);
+    }
   }
 
   function setMidiStatus(on, text) {
@@ -235,30 +261,66 @@
     midiTextEl.textContent = text;
   }
 
-  if (typeof WebMidi === "undefined") {
-    setMidiStatus(false, "WebMidi library failed to load — use Space/arrows.");
-  } else {
-    WebMidi.enable()
-      .then(() => {
-        const describe = () => WebMidi.inputs.length
-          ? "MIDI ready — " + WebMidi.inputs.map((i) => i.name).join(", ")
-          : "No MIDI device found — plug one in, or use Space/arrows.";
-        WebMidi.inputs.forEach(attachInput);
-        setMidiStatus(WebMidi.inputs.length > 0, describe());
+  // Rebuild the device dropdown and keep listening to the chosen input.
+  function refreshDevices() {
+    const inputs = WebMidi.inputs;
+    selectEl.innerHTML = "";
 
-        // Handle devices plugged in after the page loads.
-        WebMidi.addListener("connected", (e) => {
-          if (e.port.type === "input") {
-            attachInput(e.port);
-            setMidiStatus(true, describe());
-          }
-        });
-        WebMidi.addListener("disconnected", () => {
-          held.clear();
-          setMidiStatus(WebMidi.inputs.length > 0, describe());
-        });
+    if (!inputs.length) {
+      selectEl.style.display = "none";
+      listenTo(null);
+      setMidiStatus(false, "Allowed, but no MIDI device found — plug one in, or use Space/arrows.");
+      return;
+    }
+
+    inputs.forEach((inp) => {
+      const opt = document.createElement("option");
+      opt.value = inp.id;
+      opt.textContent = inp.name;
+      selectEl.appendChild(opt);
+    });
+    selectEl.style.display = "";
+
+    // Keep the current pick if it's still around, otherwise default to the first.
+    let chosen = currentInput && inputs.find((i) => i.id === currentInput.id);
+    if (!chosen) chosen = inputs[0];
+    selectEl.value = chosen.id;
+    listenTo(chosen);
+    setMidiStatus(true, "Listening to");
+  }
+
+  let settled = false;
+
+  if (typeof WebMidi === "undefined") {
+    setMidiStatus(false, "WebMidi library didn't load (CDN blocked?) — use Space/arrows.");
+  } else if (!navigator.requestMIDIAccess) {
+    setMidiStatus(false, "This browser/viewer has no Web MIDI support — open it in Chrome, Edge or Firefox. Space/arrows still work.");
+  } else {
+    setMidiStatus(false, "Enabling MIDI…");
+
+    // If nothing has settled after a few seconds, the permission prompt is
+    // probably still pending (or was dismissed) — tell the user instead of hanging.
+    const watchdog = setTimeout(() => {
+      if (!settled) setMidiStatus(false, "Still waiting on the MIDI permission prompt — look for it in the address bar. (Console has details.)");
+    }, 4000);
+
+    // Promise.resolve(...) guarantees a *synchronous* throw inside enable()
+    // is turned into a catchable rejection rather than silently hanging.
+    Promise.resolve()
+      .then(() => WebMidi.enable())
+      .then(() => {
+        settled = true; clearTimeout(watchdog);
+        refreshDevices();
+        // Re-list whenever a device is plugged in or removed.
+        WebMidi.addListener("connected",    (e) => { if (e.port.type === "input") refreshDevices(); });
+        WebMidi.addListener("disconnected", (e) => { if (e.port.type === "input") refreshDevices(); });
       })
-      .catch((err) => setMidiStatus(false, "MIDI unavailable: " + err.message + " — use Space/arrows."));
+      .catch((err) => {
+        settled = true; clearTimeout(watchdog);
+        console.error("WebMidi enable failed:", err);
+        const msg = err && err.message ? err.message : String(err);
+        setMidiStatus(false, "MIDI error: " + msg + " — use Space/arrows.");
+      });
   }
 
   render();
