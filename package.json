@@ -1,0 +1,18 @@
+{
+  "name": "vibedstuff",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "A collection of small vibed single-purpose web pages.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "nexusui": "^2.1.6"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10"
+  }
+}

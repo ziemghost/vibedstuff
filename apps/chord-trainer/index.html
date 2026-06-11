@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maj7 / m7 Chord Cycle Trainer</title>
+  <style>
+    .chord-name { font-size: 56px; font-weight: 700; line-height: 1; letter-spacing: -.02em; transition: color .12s ease; }
+    .chord-name.correct { color: #37b24d; }
+    .chord-notes { font-size: 20px; color: var(--accent); font-weight: 600; letter-spacing: .12em; }
+    .counter { color: var(--muted); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+    #piano { margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="tabs">
+      <button data-cycle="maj7" class="active">maj7 cycle</button>
+      <button data-cycle="m7">m7 cycle</button>
+      <button data-cycle="all">both</button>
+    </div>
+
+    <div class="card">
+      <div class="counter" id="counter">1 / 12</div>
+      <div class="chord-name" id="name">Cmaj7</div>
+      <div class="chord-notes" id="notes">C E G B</div>
+      <div id="piano"></div>
+    </div>
+
+    <div class="row">
+      <button class="btn" id="prev">← Prev</button>
+      <button class="btn" id="next">Next →</button>
+      <button class="btn" id="dir" title="Toggle direction of 'next'">↑ Ascending 4ths</button>
+    </div>
+
+    <label class="switch">
+      <input type="checkbox" id="show-kb" checked />
+      <span class="track"><span class="thumb"></span></span>
+      <span class="switch-text">Show chord on keyboard</span>
+    </label>
+
+    <div class="midi" id="midi">
+      <span class="dot"></span>
+      <span id="midi-text">Looking for MIDI…</span>
+      <select id="midi-select" style="display:none"></select>
+    </div>
+
+    <div class="hint">
+      Play the highlighted chord on your MIDI keyboard (any octave/voicing) to advance automatically.<br />
+      <kbd>Space</kbd> or <kbd>→</kbd> next chord &nbsp;·&nbsp; <kbd>←</kbd> previous &nbsp;·&nbsp;
+      chords are shown in <strong>root position</strong> over two octaves from C.
+    </div>
+
+    <p class="hint"><a href="../../">← back to vibedstuff</a></p>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
