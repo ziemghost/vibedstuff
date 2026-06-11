@@ -6,6 +6,8 @@
 <title>Maj7 / m7 Chord Cycle Trainer</title>
 <!-- NexusUI: the keyboard-display library -->
 <script src="https://cdn.jsdelivr.net/npm/nexusui@2.1.6/dist/NexusUI.js"></script>
+<!-- WebMidi.js: MIDI input -->
+<script src="https://cdn.jsdelivr.net/npm/webmidi@3/dist/iife/webmidi.iife.js"></script>
 <style>
   :root {
     --bg: #14161a;
@@ -41,7 +43,8 @@
     box-shadow: 0 12px 40px rgba(0,0,0,.35);
   }
   .counter { color: var(--muted); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
-  .chord-name { font-size: 56px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+  .chord-name { font-size: 56px; font-weight: 700; line-height: 1; letter-spacing: -.02em; transition: color .12s ease; }
+  .chord-name.correct { color: #37b24d; }
   .chord-notes { font-size: 20px; color: var(--accent); font-weight: 600; letter-spacing: .12em; }
   #piano { margin-top: 6px; }
   .controls { display: flex; gap: 12px; align-items: center; }
@@ -52,6 +55,9 @@
   }
   .controls button:hover { background: #2f343d; }
   .hint { color: var(--muted); font-size: 13px; text-align: center; max-width: 560px; line-height: 1.5; }
+  .midi { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .midi .dot { width: 9px; height: 9px; border-radius: 50%; background: #555; }
+  .midi.on .dot { background: #37b24d; }
   kbd {
     background: #262a32; border: 1px solid #3a4049; border-bottom-width: 2px;
     border-radius: 6px; padding: 1px 7px; font-size: 12px; font-family: inherit; color: var(--fg);
@@ -78,9 +84,12 @@
     <button id="next">Next →</button>
   </div>
 
+  <div class="midi" id="midi"><span class="dot"></span><span id="midi-text">Looking for MIDI…</span></div>
+
   <div class="hint">
+    Play the highlighted chord on your MIDI keyboard (any octave/voicing) to advance automatically.<br />
     <kbd>Space</kbd> or <kbd>→</kbd> next chord &nbsp;·&nbsp; <kbd>←</kbd> previous &nbsp;·&nbsp;
-    each chord is shown in <strong>root position</strong> on a single octave rooted at the chord root.
+    chords are shown in <strong>root position</strong> over two octaves from C.
   </div>
 
 <script>
@@ -186,6 +195,71 @@
     if (e.code === "Space" || e.key === "ArrowRight") { e.preventDefault(); next(); }
     else if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
   });
+
+  // ----- MIDI input -------------------------------------------------------
+  const midiEl     = document.getElementById("midi");
+  const midiTextEl = document.getElementById("midi-text");
+  const held = new Set();   // pitch classes (0–11) currently held down
+
+  function targetPcs() {
+    const c = list[idx];
+    return new Set(INTERVALS[c.q].map((i) => (c.pc + i) % 12));
+  }
+
+  // True when the held notes are exactly the chord's pitch classes — no more, no less.
+  function isCorrect() {
+    const target = targetPcs();
+    if (held.size !== target.size) return false;
+    for (const pc of target) if (!held.has(pc)) return false;
+    return true;
+  }
+
+  function flashCorrect() {
+    nameEl.classList.add("correct");
+    setTimeout(() => nameEl.classList.remove("correct"), 220);
+  }
+
+  function onNoteOn(e)  {
+    held.add(e.note.number % 12);
+    if (isCorrect()) { flashCorrect(); next(); }
+  }
+  function onNoteOff(e) { held.delete(e.note.number % 12); }
+
+  function attachInput(input) {
+    input.addListener("noteon", onNoteOn);
+    input.addListener("noteoff", onNoteOff);
+  }
+
+  function setMidiStatus(on, text) {
+    midiEl.classList.toggle("on", on);
+    midiTextEl.textContent = text;
+  }
+
+  if (typeof WebMidi === "undefined") {
+    setMidiStatus(false, "WebMidi library failed to load — use Space/arrows.");
+  } else {
+    WebMidi.enable()
+      .then(() => {
+        const describe = () => WebMidi.inputs.length
+          ? "MIDI ready — " + WebMidi.inputs.map((i) => i.name).join(", ")
+          : "No MIDI device found — plug one in, or use Space/arrows.";
+        WebMidi.inputs.forEach(attachInput);
+        setMidiStatus(WebMidi.inputs.length > 0, describe());
+
+        // Handle devices plugged in after the page loads.
+        WebMidi.addListener("connected", (e) => {
+          if (e.port.type === "input") {
+            attachInput(e.port);
+            setMidiStatus(true, describe());
+          }
+        });
+        WebMidi.addListener("disconnected", () => {
+          held.clear();
+          setMidiStatus(WebMidi.inputs.length > 0, describe());
+        });
+      })
+      .catch((err) => setMidiStatus(false, "MIDI unavailable: " + err.message + " — use Space/arrows."));
+  }
 
   render();
 </script>
