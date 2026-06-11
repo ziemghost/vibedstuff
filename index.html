@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Maj7 / m7 Chord Cycle Trainer</title>
 <!-- NexusUI: the keyboard-display library -->
-<script src="https://cdn.jsdelivr.net/npm/nexusui@2.1.13/dist/NexusUI.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/nexusui@2.1.6/dist/NexusUI.js"></script>
 <style>
   :root {
     --bg: #14161a;
@@ -136,6 +136,12 @@
     nameEl.textContent    = c.name;
     notesEl.textContent   = c.notes;
     counterEl.textContent = (idx + 1) + " / " + list.length;
+
+    if (typeof Nexus === "undefined") {
+      pianoEl.textContent = "Could not load the keyboard library (check your internet connection).";
+      pianoEl.style.color = "var(--muted)";
+      return;
+    }
 
     // Rebuild a one-octave keyboard rooted at this chord's root.
     if (piano) piano.destroy();
