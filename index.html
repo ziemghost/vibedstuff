@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Maj7 / m7 Chord Cycle Trainer</title>
+<!-- NexusUI: the keyboard-display library -->
+<script src="https://cdn.jsdelivr.net/npm/nexusui@2.1.13/dist/NexusUI.js"></script>
+<style>
+  :root {
+    --bg: #14161a;
+    --panel: #1d2026;
+    --fg: #f2f4f7;
+    --muted: #8a93a2;
+    --accent: #e8590c;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 100vh; gap: 22px; padding: 24px;
+  }
+  .tabs { display: flex; gap: 8px; }
+  .tabs button {
+    background: var(--panel); color: var(--muted);
+    border: 1px solid #2a2e36; border-radius: 999px;
+    padding: 8px 18px; font-size: 14px; cursor: pointer;
+    transition: all .15s ease;
+  }
+  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .card {
+    background: var(--panel); border: 1px solid #2a2e36;
+    border-radius: 18px; padding: 28px 32px 24px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
+  .counter { color: var(--muted); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+  .chord-name { font-size: 56px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+  .chord-notes { font-size: 20px; color: var(--accent); font-weight: 600; letter-spacing: .12em; }
+  #piano { margin-top: 6px; }
+  .controls { display: flex; gap: 12px; align-items: center; }
+  .controls button {
+    background: #262a32; color: var(--fg);
+    border: 1px solid #343a44; border-radius: 10px;
+    padding: 10px 18px; font-size: 15px; cursor: pointer;
+  }
+  .controls button:hover { background: #2f343d; }
+  .hint { color: var(--muted); font-size: 13px; text-align: center; max-width: 560px; line-height: 1.5; }
+  kbd {
+    background: #262a32; border: 1px solid #3a4049; border-bottom-width: 2px;
+    border-radius: 6px; padding: 1px 7px; font-size: 12px; font-family: inherit; color: var(--fg);
+  }
+</style>
+</head>
+<body>
+
+  <div class="tabs">
+    <button data-cycle="maj7" class="active">maj7 cycle</button>
+    <button data-cycle="m7">m7 cycle</button>
+    <button data-cycle="all">both</button>
+  </div>
+
+  <div class="card">
+    <div class="counter" id="counter">1 / 12</div>
+    <div class="chord-name" id="name">Cmaj7</div>
+    <div class="chord-notes" id="notes">C E G B</div>
+    <div id="piano"></div>
+  </div>
+
+  <div class="controls">
+    <button id="prev">← Prev</button>
+    <button id="next">Next →</button>
+  </div>
+
+  <div class="hint">
+    <kbd>Space</kbd> or <kbd>→</kbd> next chord &nbsp;·&nbsp; <kbd>←</kbd> previous &nbsp;·&nbsp;
+    each chord is shown in <strong>root position</strong> on a single octave rooted at the chord root.
+  </div>
+
+<script>
+  // ----- Chord data -------------------------------------------------------
+  // pc = pitch class of the root (C=0 ... B=11). Octave is fixed at 4 (C4=60).
+  // Intervals are derived from quality so enharmonic spelling never matters.
+  const INTERVALS = { maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10] };
+
+  const MAJ7 = [
+    ["Cmaj7",  "C E G B",     0],
+    ["Fmaj7",  "F A C E",     5],
+    ["Bbmaj7", "Bb D F A",    10],
+    ["Ebmaj7", "Eb G Bb D",   3],
+    ["Abmaj7", "Ab C Eb G",   8],
+    ["Dbmaj7", "Db F Ab C",   1],
+    ["Gbmaj7", "Gb Bb Db F",  6],
+    ["Bmaj7",  "B D# F# A#",  11],
+    ["Emaj7",  "E G# B D#",   4],
+    ["Amaj7",  "A C# E G#",   9],
+    ["Dmaj7",  "D F# A C#",   2],
+    ["Gmaj7",  "G B D F#",    7],
+  ].map(([name, notes, pc]) => ({ name, notes, pc, q: "maj7" }));
+
+  const M7 = [
+    ["Cm7",  "C Eb G Bb",   0],
+    ["Fm7",  "F Ab C Eb",   5],
+    ["Bbm7", "Bb Db F Ab",  10],
+    ["Ebm7", "Eb Gb Bb Db", 3],
+    ["Abm7", "Ab Cb Eb Gb", 8],
+    ["Dbm7", "Db Fb Ab Cb", 1],
+    ["F#m7", "F# A C# E",    6],
+    ["Bm7",  "B D F# A",     11],
+    ["Em7",  "E G B D",      4],
+    ["Am7",  "A C E G",      9],
+    ["Dm7",  "D F A C",      2],
+    ["Gm7",  "G Bb D F",     7],
+  ].map(([name, notes, pc]) => ({ name, notes, pc, q: "m7" }));
+
+  const CYCLES = { maj7: MAJ7, m7: M7, all: MAJ7.concat(M7) };
+
+  // ----- State ------------------------------------------------------------
+  let list = CYCLES.maj7;
+  let idx = 0;
+  let piano = null;
+
+  const nameEl    = document.getElementById("name");
+  const notesEl   = document.getElementById("notes");
+  const counterEl = document.getElementById("counter");
+  const pianoEl   = document.getElementById("piano");
+
+  function render() {
+    const c = list[idx];
+    nameEl.textContent    = c.name;
+    notesEl.textContent   = c.notes;
+    counterEl.textContent = (idx + 1) + " / " + list.length;
+
+    // Rebuild a one-octave keyboard rooted at this chord's root.
+    if (piano) piano.destroy();
+    pianoEl.innerHTML = "";
+
+    const root = 60 + c.pc;                 // root in octave 4
+    piano = new Nexus.Piano(pianoEl, {
+      size: [520, 140],
+      mode: "button",
+      lowNote: root,
+      highNote: root + 12,                  // inclusive -> full single octave
+    });
+    piano.colorize("accent", getComputedStyle(document.documentElement)
+                              .getPropertyValue("--accent").trim());
+
+    INTERVALS[c.q].forEach((i) => piano.toggleKey(root + i, true));
+  }
+
+  function next() { idx = (idx + 1) % list.length; render(); }
+  function prev() { idx = (idx - 1 + list.length) % list.length; render(); }
+
+  // ----- Wiring -----------------------------------------------------------
+  document.getElementById("next").addEventListener("click", next);
+  document.getElementById("prev").addEventListener("click", prev);
+
+  document.querySelectorAll(".tabs button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tabs button").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      list = CYCLES[btn.dataset.cycle];
+      idx = 0;
+      render();
+    });
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Space" || e.key === "ArrowRight") { e.preventDefault(); next(); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
+  });
+
+  render();
+</script>
+</body>
+</html>
