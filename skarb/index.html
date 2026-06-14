@@ -7,230 +7,275 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-
-    html {
-      background: #0a0812;
-    }
+    html { background: #b8e0f8; }
     body {
-      margin: 0; padding: 20px 16px;
-      background: #0a0812;
+      margin: 0; padding: 0;
+      background: #b8e0f8;
+      min-height: 100vh;
+      font-family: 'Press Start 2P', monospace;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Forest canvas background */
+    #scene {
+      display: block;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 0;
+    }
+
+    /* Content on top */
+    .ui {
+      position: relative; z-index: 1;
       min-height: 100vh;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      font-family: 'Press Start 2P', monospace;
-      /* CSS pixel stars via box-shadow on a pseudo-element */
-      position: relative; overflow-x: hidden;
-    }
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      pointer-events: none; z-index: 0;
-      background-image:
-        radial-gradient(1px 1px at  8% 12%, rgba(255,255,255,.75) 0%, transparent 100%),
-        radial-gradient(1px 1px at 18% 55%, rgba(255,255,255,.45) 0%, transparent 100%),
-        radial-gradient(2px 2px at 27%  8%, rgba(255,255,255,.60) 0%, transparent 100%),
-        radial-gradient(1px 1px at 38% 72%, rgba(255,255,255,.50) 0%, transparent 100%),
-        radial-gradient(1px 1px at 47% 30%, rgba(255,255,255,.35) 0%, transparent 100%),
-        radial-gradient(2px 2px at 55% 85%, rgba(255,255,255,.55) 0%, transparent 100%),
-        radial-gradient(1px 1px at 63% 20%, rgba(255,255,255,.65) 0%, transparent 100%),
-        radial-gradient(1px 1px at 72% 60%, rgba(255,255,255,.40) 0%, transparent 100%),
-        radial-gradient(2px 2px at 81% 40%, rgba(255,255,255,.70) 0%, transparent 100%),
-        radial-gradient(1px 1px at 88%  5%, rgba(255,255,255,.55) 0%, transparent 100%),
-        radial-gradient(1px 1px at 92% 75%, rgba(255,255,255,.45) 0%, transparent 100%),
-        radial-gradient(1px 1px at 14% 88%, rgba(255,255,255,.35) 0%, transparent 100%),
-        radial-gradient(2px 2px at 44% 50%, rgba(255,255,255,.25) 0%, transparent 100%),
-        radial-gradient(1px 1px at 77% 92%, rgba(255,255,255,.50) 0%, transparent 100%),
-        radial-gradient(1px 1px at 33% 35%, rgba(255,255,255,.40) 0%, transparent 100%);
+      padding: 24px 16px;
     }
 
-    .ui {
-      position: relative; z-index: 1;
-      display: flex; flex-direction: column;
-      align-items: center; gap: 0;
-      width: 100%;
-    }
-
-    .chars {
-      display: flex; align-items: flex-end; gap: 12px;
-      margin-bottom: -3px;
-    }
-    canvas.sprite {
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-      display: block;
-      background: transparent;
-    }
-
-    .dialog-box {
-      width: min(500px, 96vw);
-      border: 4px solid #fff;
-      background: #000;
-      padding: 20px 22px 14px;
+    /* MapleStory-inspired panel */
+    .ms-panel {
+      width: min(480px, 96vw);
+      background: #fffce0;
+      border: 3px solid #d88818;
+      border-radius: 14px;
+      box-shadow: 0 5px 0 #a85f08, 0 8px 28px rgba(80,40,0,.22);
+      padding: 24px 24px 18px;
       position: relative;
     }
-    .speaker {
-      position: absolute; top: -12px; left: 14px;
-      background: #000; color: #ffe066;
-      font-size: 8px; padding: 0 8px;
-      font-family: 'Press Start 2P', monospace;
+    .ms-title {
+      position: absolute; top: -15px; left: 16px;
+      background: #d88818;
+      color: #fff6e0;
+      font-size: 8px;
+      padding: 4px 14px;
+      border-radius: 6px;
+      box-shadow: 0 2px 0 #a85f08;
+      white-space: nowrap;
     }
-    .dialog-text {
+    .ms-text {
       font-size: clamp(7px, 1.9vw, 9px);
-      color: #fff; line-height: 2.1;
+      color: #3a2208;
+      line-height: 2.3;
       min-height: 5.5em;
     }
     .cur {
       display: inline-block; width: 8px; height: 10px;
-      background: #fff; vertical-align: middle; margin-left: 2px;
-      animation: blink .65s steps(1) infinite;
+      background: #d88818; vertical-align: middle; margin-left: 2px;
+      animation: blink .6s steps(1) infinite;
     }
     @keyframes blink { 50% { opacity: 0; } }
 
-    .actions { display: flex; justify-content: flex-end; margin-top: 10px; }
-    .btn {
+    .ms-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+    .ms-btn {
       font-family: 'Press Start 2P', monospace;
-      font-size: 8px; padding: 9px 14px;
-      background: #ffe066; color: #000; border: none; cursor: pointer;
+      font-size: 8px; padding: 10px 18px;
+      background: #d88818; color: #fff;
+      border: none; border-radius: 8px;
+      box-shadow: 0 4px 0 #a85f08;
+      cursor: pointer;
+      position: relative; top: 0;
+      transition: top .1s, box-shadow .1s;
     }
-    .btn:hover { background: #fff; }
+    .ms-btn:hover { background: #f0a030; }
+    .ms-btn:active { top: 4px; box-shadow: none; }
 
     .back {
       position: fixed; top: 14px; left: 14px; z-index: 2;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 7px; color: #444; text-decoration: none;
+      font-size: 7px; color: #4a6830;
+      text-decoration: none;
+      text-shadow: 0 1px 3px rgba(255,255,255,.9);
     }
-    .back:hover { color: #aaa; }
+    .back:hover { color: #1a3010; }
 
     .floater {
       position: fixed; pointer-events: none;
-      font-size: 18px;
-      animation: floatup 1.4s ease-out forwards;
-      z-index: 10;
+      font-size: 22px; z-index: 10;
+      animation: floatup 1.6s ease-out forwards;
     }
     @keyframes floatup {
       from { transform: translateY(0) scale(1); opacity: 1; }
-      to   { transform: translateY(-90px) scale(.4); opacity: 0; }
+      to   { transform: translateY(-110px) scale(.3); opacity: 0; }
     }
   </style>
 </head>
 <body>
-<a class="back" href="/vibedstuff/">← BACK</a>
+<canvas id="scene"></canvas>
+<a class="back" href="/vibedstuff/">← back</a>
 
 <div class="ui">
-  <div class="chars">
-    <canvas class="sprite" id="c-kris"></canvas>
-    <canvas class="sprite" id="c-ralsei"></canvas>
-    <canvas class="sprite" id="c-susie"></canvas>
-  </div>
-  <div class="dialog-box">
-    <span class="speaker">RALSEI</span>
-    <div class="dialog-text" id="dtext"></div>
-    <div class="actions"><button class="btn" id="btn">▶ NEXT</button></div>
+  <div class="ms-panel">
+    <span class="ms-title">✿ a message for you ✿</span>
+    <div class="ms-text" id="dtext"></div>
+    <div class="ms-actions">
+      <button class="ms-btn" id="btn">▶ NEXT</button>
+    </div>
   </div>
 </div>
 
 <script>
-// ── Sprite palette & drawing ─────────────────────────────────────
-const T=0,K=1,W=2,G=3,R=4,P=5,Y=6,B=7,C=8,S=9;
-const PAL = [
-  null,
-  '#111111', // K black / outline
-  '#f0ece0', // W cream
-  '#2a5c1e', // G dark green
-  '#cc3333', // R red
-  '#9955cc', // P purple
-  '#f5e030', // Y yellow
-  '#4477cc', // B blue
-  '#e877c4', // C pink
-  '#666666', // S dark gray
-];
+// ── Forest canvas scene ───────────────────────────────────────────
+const cv = document.getElementById('scene');
+const cx = cv.getContext('2d');
 
-// 10 cols × 19 rows
-const RALSEI = [
-  [0,0,1,G,1,0,0,0,0,0],
-  [0,1,G,G,G,1,0,0,0,0],
-  [1,G,G,G,G,G,1,0,0,0],
-  [1,1,1,1,1,1,1,1,0,0],
-  [0,0,1,W,W,W,1,0,0,0],
-  [0,1,W,W,W,W,W,1,0,0],
-  [0,1,W,1,W,W,1,W,1,0],
-  [0,1,W,W,W,W,W,W,1,0],
-  [0,0,1,W,W,W,W,1,0,0],
-  [0,0,1,R,R,R,R,1,0,0],
-  [0,1,R,R,R,R,R,R,1,0],
-  [0,1,G,G,G,G,G,G,1,0],
-  [1,G,G,G,G,G,G,G,G,1],
-  [1,G,G,G,G,G,G,G,G,1],
-  [0,1,G,G,G,G,G,G,1,0],
-  [0,0,1,G,1,1,G,1,0,0],
-  [0,0,1,G,1,1,G,1,0,0],
-  [0,1,G,G,1,1,G,G,1,0],
-  [0,1,1,1,0,0,1,1,1,0],
-];
-
-// 10 cols × 17 rows
-const KRIS = [
-  [0,1,S,S,S,S,S,1,0,0],
-  [0,1,S,S,S,S,S,1,0,0],
-  [0,1,W,W,W,W,W,1,0,0],
-  [1,W,W,W,W,W,W,W,1,0],
-  [1,W,1,W,W,W,1,W,1,0],
-  [1,W,W,W,W,W,W,W,1,0],
-  [0,1,W,W,W,W,W,1,0,0],
-  [0,1,B,B,B,B,B,1,0,0],
-  [1,B,W,B,W,B,W,B,1,0],
-  [1,B,W,B,W,B,W,B,1,0],
-  [0,1,B,B,B,B,B,1,0,0],
-  [0,1,K,K,K,K,K,1,0,0],
-  [0,1,K,K,K,K,K,1,0,0],
-  [0,0,1,K,1,1,K,1,0,0],
-  [0,0,1,K,1,1,K,1,0,0],
-  [0,1,K,K,1,1,K,K,1,0],
-  [0,1,1,1,0,0,1,1,1,0],
-];
-
-// 10 cols × 16 rows
-const SUSIE = [
-  [0,1,C,C,C,C,C,1,0,0],
-  [1,C,C,C,C,C,C,C,1,0],
-  [1,P,P,P,P,P,P,P,1,0],
-  [1,P,Y,P,P,P,Y,P,1,0],
-  [1,P,Y,P,P,P,Y,P,1,0],
-  [1,P,P,1,1,1,P,P,1,0],
-  [0,1,P,P,P,P,P,1,0,0],
-  [0,1,K,K,K,K,K,1,0,0],
-  [1,K,K,K,K,K,K,K,1,0],
-  [1,K,K,K,K,K,K,K,1,0],
-  [0,1,K,K,K,K,K,1,0,0],
-  [0,0,1,K,1,1,K,1,0,0],
-  [0,0,1,K,1,1,K,1,0,0],
-  [0,1,K,K,1,1,K,K,1,0],
-  [0,1,1,1,0,0,1,1,1,0],
-];
-
-function drawSprite(id, grid, scale) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const cols = grid[0].length, rows = grid.length;
-  el.width = cols * scale;
-  el.height = rows * scale;
-  el.style.width  = (cols * scale) + 'px';
-  el.style.height = (rows * scale) + 'px';
-  const ctx = el.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-  grid.forEach((row, y) => row.forEach((c, x) => {
-    if (!c) return;
-    ctx.fillStyle = PAL[c];
-    ctx.fillRect(x * scale, y * scale, scale, scale);
-  }));
+function resize() {
+  cv.width  = Math.ceil(window.innerWidth);
+  cv.height = Math.ceil(window.innerHeight);
+  draw();
 }
 
-const SC = 5;
-drawSprite('c-kris',   KRIS,   SC);
-drawSprite('c-ralsei', RALSEI, SC);
-drawSprite('c-susie',  SUSIE,  SC);
+function draw() {
+  const W = cv.width, H = cv.height;
+  const ground = H * 0.68;
 
-// ── Compliments ──────────────────────────────────────────────────
+  // Sky gradient
+  const sky = cx.createLinearGradient(0, 0, 0, ground);
+  sky.addColorStop(0, '#88c8f0');
+  sky.addColorStop(1, '#c8ecd0');
+  cx.fillStyle = sky;
+  cx.fillRect(0, 0, W, ground);
+
+  // Clouds
+  drawCloud(W * 0.12, H * 0.10, 70);
+  drawCloud(W * 0.45, H * 0.07, 90);
+  drawCloud(W * 0.78, H * 0.13, 55);
+
+  // Far trees (darker, smaller)
+  [0.08, 0.17, 0.26, 0.68, 0.78, 0.86, 0.94].forEach(p =>
+    drawTree(W * p, ground, H * 0.20, '#2a6020', '#388030', '#48a840')
+  );
+
+  // Ground layers
+  cx.fillStyle = '#5ab840';
+  cx.fillRect(0, ground, W, H * 0.10);
+  cx.fillStyle = '#4a9830';
+  cx.fillRect(0, ground + H * 0.10, W, H * 0.90);
+
+  // Ground highlight strip
+  cx.fillStyle = '#70d050';
+  cx.fillRect(0, ground, W, 4);
+
+  // Grass tufts
+  for (let i = 0; i < Math.ceil(W / 18); i++) {
+    drawGrassTuft(i * 18 + 6, ground + 4);
+  }
+
+  // Flowers
+  const flowerColors = ['#ff88aa','#ffcc44','#dd88ff','#88ccff','#ff9944'];
+  for (let i = 0; i < 18; i++) {
+    drawFlower(W * (0.03 + i * 0.055), ground + 14, flowerColors[i % flowerColors.length]);
+  }
+
+  // Mushrooms (vary sizes, fixed positions by ratio)
+  drawMushroom(W * 0.30, ground, 34);
+  drawMushroom(W * 0.36, ground, 22);
+  drawMushroom(W * 0.53, ground, 28);
+  drawMushroom(W * 0.60, ground, 18);
+  drawMushroom(W * 0.43, ground, 14);
+
+  // Butterflies
+  drawButterfly(W * 0.35, H * 0.48);
+  drawButterfly(W * 0.60, H * 0.52);
+}
+
+function drawCloud(x, y, r) {
+  cx.fillStyle = 'rgba(255,255,255,0.88)';
+  [[0,0,r],[r*0.55,-r*0.18,r*0.7],[r*-0.5,-r*0.1,r*0.65]].forEach(([dx,dy,rr]) => {
+    cx.beginPath();
+    cx.ellipse(x+dx, y+dy, rr*0.8, rr*0.5, 0, 0, Math.PI*2);
+    cx.fill();
+  });
+}
+
+function drawTree(x, y, h, c1, c2, c3) {
+  const w = h * 0.5;
+  cx.fillStyle = '#6b4226';
+  cx.fillRect(x - w*0.12, y - h*0.32, w*0.24, h*0.32);
+  [[c1,1.0,0.42],[c2,0.78,0.48],[c3,0.56,0.55]].forEach(([c,yf,wf]) => {
+    cx.fillStyle = c;
+    cx.beginPath();
+    cx.moveTo(x, y - h * yf);
+    cx.lineTo(x - w * wf, y - h * (yf - 0.28));
+    cx.lineTo(x + w * wf, y - h * (yf - 0.28));
+    cx.closePath();
+    cx.fill();
+  });
+}
+
+function drawGrassTuft(x, y) {
+  cx.strokeStyle = '#3a8828';
+  cx.lineWidth = 1.5;
+  [[-3,0],[0,-4],[3,0]].forEach(([dx,dy]) => {
+    cx.beginPath();
+    cx.moveTo(x, y); cx.lineTo(x+dx, y+dy-4);
+    cx.stroke();
+  });
+}
+
+function drawFlower(x, y, color) {
+  cx.fillStyle = color;
+  [[-3,0],[3,0],[0,-3],[0,3]].forEach(([dx,dy]) => {
+    cx.beginPath(); cx.ellipse(x+dx, y+dy, 3, 2, 0, 0, Math.PI*2); cx.fill();
+  });
+  cx.fillStyle = '#ffee55';
+  cx.beginPath(); cx.arc(x, y, 2.2, 0, Math.PI*2); cx.fill();
+}
+
+function drawMushroom(x, y, s) {
+  // Stalk
+  cx.fillStyle = '#e8d8a8'; cx.fillRect(x-s*0.24, y-s*0.72, s*0.48, s*0.72);
+  cx.fillStyle = '#c8b880'; cx.fillRect(x-s*0.24, y-s*0.72, s*0.12, s*0.72);
+  // Cap shadow
+  cx.fillStyle = '#b81818';
+  cx.beginPath(); cx.ellipse(x+s*0.04, y-s*0.70, s*0.68, s*0.52, 0, Math.PI, 0); cx.fill();
+  // Cap main
+  cx.fillStyle = '#e82828';
+  cx.beginPath(); cx.ellipse(x, y-s*0.72, s*0.68, s*0.52, 0, Math.PI, 0); cx.fill();
+  // White spots
+  cx.fillStyle = 'rgba(255,255,255,0.92)';
+  [[0,-0.46],[-.34,-0.30],[.36,-0.28],[0.04,-0.20]].forEach(([dx,dy]) => {
+    cx.beginPath(); cx.arc(x+dx*s, y+dy*s, s*0.11, 0, Math.PI*2); cx.fill();
+  });
+  // Stalk gills
+  cx.fillStyle = '#f0e8c0';
+  cx.beginPath(); cx.ellipse(x, y-s*0.72, s*0.7, s*0.12, 0, 0, Math.PI); cx.fill();
+}
+
+function drawButterfly(x, y) {
+  const t = Date.now() * 0.003;
+  const flap = Math.sin(t + x) * 0.3 + 0.7;
+  cx.fillStyle = 'rgba(220,150,255,0.7)';
+  cx.beginPath();
+  cx.ellipse(x - 8*flap, y, 8*flap, 5, -0.4, 0, Math.PI*2); cx.fill();
+  cx.beginPath();
+  cx.ellipse(x + 8*flap, y, 8*flap, 5, 0.4, 0, Math.PI*2); cx.fill();
+  cx.fillStyle = '#333';
+  cx.beginPath(); cx.ellipse(x, y, 1.5, 5, 0, 0, Math.PI*2); cx.fill();
+}
+
+// Animate butterflies
+function animate() {
+  // Just redraw the butterfly layer cheaply by re-drawing full scene
+  // but that's expensive — instead draw butterflies on top each frame
+  const W = cv.width, H = cv.height;
+  // Clear just the butterfly area by re-drawing the sky bg there
+  // Actually: redraw full scene at low rate + butterflies every frame
+  requestAnimationFrame(animate);
+}
+
+// Redraw scene every 50ms for butterfly animation
+let lastDraw = 0;
+function loop(ts) {
+  if (ts - lastDraw > 50) { draw(); lastDraw = ts; }
+  requestAnimationFrame(loop);
+}
+resize();
+window.addEventListener('resize', resize);
+requestAnimationFrame(loop);
+
+// ── Compliments ───────────────────────────────────────────────────
 const LINES = [
   "You make every ordinary\nmoment feel like something\nworth remembering.",
   "Your kindness is the quiet\nkind — the kind that\nactually sticks.",
@@ -249,50 +294,40 @@ const LINES = [
   "Your care for others is so\nreal it's almost unfair\nto everyone else.",
 ];
 
-// ── Typewriter ───────────────────────────────────────────────────
 let lastIdx = -1, ticker = null, pos = 0, cur = '';
 const textEl = document.getElementById('dtext');
 const btn = document.getElementById('btn');
 
 function pick() {
-  let i;
-  do { i = Math.floor(Math.random() * LINES.length); } while (i === lastIdx);
-  lastIdx = i;
-  return LINES[i];
+  let i; do { i = Math.floor(Math.random() * LINES.length); } while (i === lastIdx);
+  lastIdx = i; return LINES[i];
 }
 
 function startType(str) {
-  clearInterval(ticker);
-  pos = 0; cur = str;
+  clearInterval(ticker); pos = 0; cur = str;
   textEl.innerHTML = '<span class="cur"></span>';
   ticker = setInterval(() => {
     pos++;
     const slice = cur.slice(0, pos).replace(/\n/g, '<br>');
-    textEl.innerHTML = pos < cur.length
-      ? slice + '<span class="cur"></span>'
-      : slice;
+    textEl.innerHTML = pos < cur.length ? slice + '<span class="cur"></span>' : slice;
     if (pos >= cur.length) { clearInterval(ticker); ticker = null; }
   }, 42);
 }
 
 btn.addEventListener('click', () => {
   if (ticker) {
-    clearInterval(ticker); ticker = null;
-    pos = cur.length;
+    clearInterval(ticker); ticker = null; pos = cur.length;
     textEl.innerHTML = cur.replace(/\n/g, '<br>');
   } else {
-    const hearts = ['♡', '♡', '✨', '★'];
-    for (let i = 0; i < 3; i++) {
+    ['🌸','✨','🍄','💛','🌿'].forEach((e, i) => {
       const f = document.createElement('span');
-      f.className = 'floater';
-      f.textContent = hearts[Math.floor(Math.random() * hearts.length)];
-      f.style.left   = (15 + Math.random() * 70) + 'vw';
-      f.style.bottom = '30vh';
-      f.style.color  = ['#ffe066','#ff88bb','#88ddff','#aaffaa'][Math.floor(Math.random() * 4)];
-      f.style.animationDelay = (i * 0.15) + 's';
+      f.className = 'floater'; f.textContent = e;
+      f.style.left = (10 + Math.random() * 80) + 'vw';
+      f.style.bottom = '28vh';
+      f.style.animationDelay = (i * 0.1) + 's';
       document.body.appendChild(f);
-      setTimeout(() => f.remove(), 1600);
-    }
+      setTimeout(() => f.remove(), 1800);
+    });
     startType(pick());
   }
 });
