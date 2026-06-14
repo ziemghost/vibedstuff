@@ -97,34 +97,6 @@ a { color: var(--accent); }
 
 .hint { color: var(--muted); font-size: 13px; text-align: center; max-width: 560px; line-height: 1.5; }
 
-/* ── Lonely kayak scene (shared by the home page and the sad-kayak app) ── */
-.scene { width: min(560px, 92vw); filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .45)); }
-
-.boat { animation: bob 4.2s ease-in-out infinite; transform-origin: 200px 210px; }
-@keyframes bob {
-  0%, 100% { transform: translateY(0) rotate(-1.2deg); }
-  50%      { transform: translateY(7px) rotate(1.2deg); }
-}
-
-.wave { animation: drift 6s linear infinite; }
-.wave.b { animation-duration: 9s; animation-direction: reverse; }
-@keyframes drift {
-  from { transform: translateX(-18px); }
-  to   { transform: translateX(18px); }
-}
-
-.rain line { animation: fall 1.3s linear infinite; }
-.rain line:nth-child(2) { animation-delay: .45s; }
-.rain line:nth-child(3) { animation-delay: .9s; }
-@keyframes fall {
-  from { transform: translateY(-6px); opacity: 0; }
-  30%  { opacity: .8; }
-  to   { transform: translateY(14px); opacity: 0; }
-}
-
-/* Confetti canvas: full-screen, above content, click-through. */
-#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
-
 kbd {
   background: var(--control); border: 1px solid #3a4049; border-bottom-width: 2px;
   border-radius: 6px; padding: 1px 7px; font-size: 12px; font-family: inherit; color: var(--fg);
