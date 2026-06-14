@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>For My Skarb 💛</title>
+  <link rel="stylesheet" href="/vibedstuff/src/styles/theme.css" />
+  <style>
+    .heart {
+      font-size: 52px;
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.12); }
+    }
+    .title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--muted);
+    }
+    .compliment {
+      font-size: clamp(17px, 4.5vw, 22px);
+      line-height: 1.55;
+      text-align: center;
+      max-width: 360px;
+      min-height: 80px;
+      color: var(--fg);
+      transition: opacity .25s ease, transform .25s ease;
+    }
+    .compliment.hidden {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    .btn-accent {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 13px 28px;
+      font-size: 16px;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: opacity .15s;
+    }
+    .btn-accent:hover { opacity: .88; }
+    .back { position: fixed; top: 18px; left: 18px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <a class="back" href="/vibedstuff/">← vibedstuff</a>
+  <main class="page">
+    <div class="card" style="max-width:440px; width:100%; text-align:center; gap:20px;">
+      <div class="heart">💛</div>
+      <div class="title">for my skarb</div>
+      <div class="compliment" id="compliment"></div>
+      <button class="btn-accent" id="btn">Another one ✨</button>
+    </div>
+  </main>
+  <script>
+    const compliments = [
+      "You make every ordinary moment feel like something worth remembering.",
+      "Your kindness is the quiet kind — the kind that actually sticks.",
+      "The world genuinely got better the day you showed up in it.",
+      "You have this gift of making people feel completely at home.",
+      "Your laugh is one of my favourite sounds in the whole world.",
+      "You notice the little things, and that means more than you know.",
+      "You're thoughtful in ways most people don't even think to be.",
+      "Talking to you always leaves me feeling like myself again.",
+      "You bring warmth into every room you walk into, without even trying.",
+      "You're the first person I want to tell all my good news to.",
+      "You make the boring stuff feel like an adventure.",
+      "Your care for others is so real it's almost unfair to everyone else.",
+      "You're exactly who you are — and that's more than enough.",
+      "You have a heart that just quietly holds everything together.",
+      "I'm so glad you exist, and I mean that completely.",
+      "You make patience look easy, even when it isn't.",
+      "Being around you is its own kind of comfort.",
+      "You're brilliant and you never make a big deal of it.",
+      "You always know the right thing to say, even when words are hard.",
+      "Every day with you is a small gift I don't take for granted.",
+    ];
+
+    let last = -1;
+    const el = document.getElementById("compliment");
+
+    function show() {
+      let idx;
+      do { idx = Math.floor(Math.random() * compliments.length); } while (idx === last);
+      last = idx;
+      el.classList.add("hidden");
+      setTimeout(() => {
+        el.textContent = compliments[idx];
+        el.classList.remove("hidden");
+      }, 260);
+    }
+
+    document.getElementById("btn").addEventListener("click", show);
+    show();
+  </script>
+</body>
+</html>
