@@ -1,8 +1,7 @@
 import "@/styles/theme.css";
 
 // Tiny stateful backend on the box (FastAPI + SQLite behind Caddy HTTPS).
-// IPv6-only host (Hetzner v4 costs money). IPv4-only visitors can't reach it.
-const API = "https://2a01-4f9-c014-cd30--1.sslip.io";
+const API = "https://46-62-200-155.sslip.io";
 
 const count = document.getElementById("count");
 const label = document.getElementById("label");
