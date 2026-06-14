@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visit Counter</title>
+  <style>
+    .count { font-size: clamp(56px, 16vw, 120px); font-weight: 700; letter-spacing: -.03em; line-height: 1; color: var(--accent); }
+    .count.loading { color: var(--muted); }
+    .label { color: var(--muted); font-size: 16px; }
+    .meta { color: var(--muted); font-size: 12px; line-height: 1.6; text-align: center; max-width: 460px; }
+    .back { position: fixed; top: 18px; left: 18px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <a class="back" href="/vibedstuff/">← vibedstuff</a>
+  <main class="page">
+    <div class="count loading" id="count">…</div>
+    <div class="label" id="label">counting…</div>
+    <p class="meta">
+      Every time this page opens, the browser POSTs to a tiny SQLite-backed API
+      running on the box (FastAPI behind Caddy). Refresh and watch it climb.
+    </p>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
