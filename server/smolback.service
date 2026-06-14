@@ -1,0 +1,27 @@
+[Unit]
+Description=smolback — tiny stateful API over SQLite
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=smolback
+Group=smolback
+WorkingDirectory=/opt/smolback
+Environment=SMOLBACK_DB=/opt/smolback/data/smol.db
+Environment=SMOLBACK_ORIGINS=https://ziemghost.github.io
+ExecStart=/opt/smolback/venv/bin/uvicorn app:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+
+# Cheap guards (not airtight): cap blast radius + resources so a popped app
+# can't mine or roam. Runs as its own user, off mtizim's account.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/smolback/data
+MemoryMax=256M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

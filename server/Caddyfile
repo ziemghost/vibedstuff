@@ -1,0 +1,6 @@
+# smolback reverse proxy with automatic HTTPS (Let's Encrypt).
+# IPv4 sslip.io host so every visitor (incl. IPv4-only mobile) can reach it.
+46-62-200-155.sslip.io {
+	encode gzip
+	reverse_proxy 127.0.0.1:8000
+}
