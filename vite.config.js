@@ -4,15 +4,16 @@ import { fileURLToPath } from "node:url";
 import { readdirSync, existsSync } from "node:fs";
 
 const root = dirname(fileURLToPath(import.meta.url));
-const appsDir = resolve(root, "apps");
 
-// Every page is its own HTML entry point. The landing page lives at the root,
-// and each app is auto-discovered at apps/<name>/index.html — so adding a new
-// page never requires touching this config.
+// Each page is its own top-level folder with an index.html, served at
+// /vibedstuff/<name>/. The landing page is the root index.html. New page =
+// new folder; no config change needed.
+const SKIP = new Set(["src", "node_modules", "dist", ".git", ".github", "public", ".vite"]);
 const input = { main: resolve(root, "index.html") };
-for (const name of readdirSync(appsDir)) {
-  const html = resolve(appsDir, name, "index.html");
-  if (existsSync(html)) input[name] = html;
+for (const entry of readdirSync(root, { withFileTypes: true })) {
+  if (!entry.isDirectory() || SKIP.has(entry.name)) continue;
+  const html = resolve(root, entry.name, "index.html");
+  if (existsSync(html)) input[entry.name] = html;
 }
 
 export default defineConfig({
