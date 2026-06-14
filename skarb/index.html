@@ -128,73 +128,72 @@ const foxes = [
 ];
 
 function drawFox(x, y, phase, dir) {
-  // y = ground level; fox stands with feet at y
   cx.save();
-  cx.translate(x, y);
-  cx.scale(dir, 1);   // mirror for left-facing
+  try {
+    cx.translate(x, y);
+    cx.scale(dir, 1);
 
-  const sw = Math.sin(phase) * 3;
+    const sw = Math.sin(phase) * 3;
 
-  // Back legs (drawn first so body covers tops)
-  cx.fillStyle = '#c05818';
-  cx.fillRect(-13, -14 - sw, 4, 14 + sw);
-  cx.fillRect( -8, -14 + sw, 4, 14 - sw);
+    // Back legs
+    cx.fillStyle = '#c05818';
+    cx.fillRect(-13, -17, 4, 17 - sw);
+    cx.fillRect( -8, -17, 4, 17 + sw);
 
-  // Tail
-  cx.fillStyle = '#e07828';
-  cx.beginPath();
-  cx.moveTo(-10, -20);
-  cx.bezierCurveTo(-24, -16, -32, -26, -24, -38);
-  cx.bezierCurveTo(-18, -44, -8, -34, -8, -22);
-  cx.fill();
-  cx.fillStyle = '#f4e8d0';
-  cx.beginPath();
-  cx.ellipse(-24, -38, 6, 5, -0.4, 0, Math.PI * 2);
-  cx.fill();
+    // Tail (arc-based, no bezier)
+    cx.fillStyle = '#e07828';
+    cx.beginPath();
+    cx.arc(-20, -30, 11, 0, Math.PI * 2);
+    cx.fill();
+    cx.fillStyle = '#f4e8d0';
+    cx.beginPath();
+    cx.arc(-20, -38, 5, 0, Math.PI * 2);
+    cx.fill();
 
-  // Body
-  cx.fillStyle = '#e07828';
-  cx.beginPath();
-  cx.ellipse(0, -20, 16, 9, 0, 0, Math.PI * 2);
-  cx.fill();
+    // Body
+    cx.fillStyle = '#e07828';
+    cx.beginPath();
+    cx.ellipse(0, -20, 16, 9, 0, 0, Math.PI * 2);
+    cx.fill();
 
-  // Belly
-  cx.fillStyle = '#f4e8d0';
-  cx.beginPath();
-  cx.ellipse(2, -18, 9, 6, 0, 0, Math.PI * 2);
-  cx.fill();
+    // Belly
+    cx.fillStyle = '#f4e8d0';
+    cx.beginPath();
+    cx.ellipse(2, -18, 9, 6, 0, 0, Math.PI * 2);
+    cx.fill();
 
-  // Front legs
-  cx.fillStyle = '#c05818';
-  cx.fillRect( 8, -14 + sw, 4, 14 - sw);
-  cx.fillRect(13, -14 - sw, 4, 14 + sw);
+    // Front legs
+    cx.fillStyle = '#c05818';
+    cx.fillRect( 8, -17, 4, 17 + sw);
+    cx.fillRect(13, -17, 4, 17 - sw);
 
-  // Head
-  cx.fillStyle = '#e07828';
-  cx.beginPath();
-  cx.ellipse(16, -26, 9, 8, 0.15, 0, Math.PI * 2);
-  cx.fill();
+    // Head
+    cx.fillStyle = '#e07828';
+    cx.beginPath();
+    cx.arc(16, -26, 9, 0, Math.PI * 2);
+    cx.fill();
 
-  // Muzzle
-  cx.fillStyle = '#f4e8d0';
-  cx.beginPath();
-  cx.ellipse(23, -23, 5, 4, 0.2, 0, Math.PI * 2);
-  cx.fill();
+    // Muzzle
+    cx.fillStyle = '#f4e8d0';
+    cx.beginPath();
+    cx.ellipse(22, -23, 5, 4, 0, 0, Math.PI * 2);
+    cx.fill();
 
-  // Nose & eye
-  cx.fillStyle = '#111';
-  cx.beginPath(); cx.arc(27, -22, 1.5, 0, Math.PI * 2); cx.fill();
-  cx.beginPath(); cx.arc(20, -29, 1.5, 0, Math.PI * 2); cx.fill();
+    // Nose & eye
+    cx.fillStyle = '#111';
+    cx.beginPath(); cx.arc(26, -21, 1.5, 0, Math.PI * 2); cx.fill();
+    cx.beginPath(); cx.arc(19, -29, 1.5, 0, Math.PI * 2); cx.fill();
 
-  // Ears
-  cx.fillStyle = '#e07828';
-  cx.beginPath(); cx.moveTo(11,-31); cx.lineTo(7,-40); cx.lineTo(16,-32); cx.fill();
-  cx.beginPath(); cx.moveTo(17,-30); cx.lineTo(14,-39); cx.lineTo(22,-31); cx.fill();
-  cx.fillStyle = '#e87888';
-  cx.beginPath(); cx.moveTo(11,-32); cx.lineTo(9,-38); cx.lineTo(15,-33); cx.fill();
-  cx.beginPath(); cx.moveTo(17,-31); cx.lineTo(15,-37); cx.lineTo(21,-32); cx.fill();
-
-  cx.restore();
+    // Ears (triangles)
+    cx.fillStyle = '#e07828';
+    cx.beginPath(); cx.moveTo(10,-31); cx.lineTo(7,-41); cx.lineTo(16,-32); cx.closePath(); cx.fill();
+    cx.beginPath(); cx.moveTo(17,-30); cx.lineTo(14,-40); cx.lineTo(22,-31); cx.closePath(); cx.fill();
+    cx.fillStyle = '#e87888';
+    cx.beginPath(); cx.moveTo(10,-32); cx.lineTo(9,-38); cx.lineTo(15,-33); cx.closePath(); cx.fill();
+    cx.beginPath(); cx.moveTo(17,-31); cx.lineTo(15,-37); cx.lineTo(21,-32); cx.closePath(); cx.fill();
+  } finally {
+    cx.restore();  // always restore, even if something throws
+  }
 }
 
 function resize() {
@@ -348,17 +347,19 @@ function animate() {
 // Animate scene at ~30fps
 let lastDraw = 0;
 function loop(ts) {
-  if (ts - lastDraw > 33) {
-    const W = cv.width;
-    foxes.forEach(f => {
-      f.rx += f.dir * (1.4 / W);
-      f.phase += 0.14;
-      if (f.rx > 1.12) f.rx = -0.12;
-      if (f.rx < -0.12) f.rx = 1.12;
-    });
-    draw();
-    lastDraw = ts;
-  }
+  try {
+    if (ts - lastDraw > 33) {
+      const W = cv.width;
+      foxes.forEach(f => {
+        f.rx += f.dir * (1.4 / W);
+        f.phase += 0.14;
+        if (f.rx > 1.12) f.rx = -0.12;
+        if (f.rx < -0.12) f.rx = 1.12;
+      });
+      draw();
+      lastDraw = ts;
+    }
+  } catch(e) { /* keep looping on error */ }
   requestAnimationFrame(loop);
 }
 resize();
