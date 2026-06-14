@@ -7,4 +7,10 @@ export const apps = [
     description:
       "Drill the cycle of fourths/fifths. Play the highlighted chord on a MIDI keyboard to auto-advance.",
   },
+  {
+    slug: "sad-kayak",
+    title: "Lonely Guy in a Kayak",
+    description:
+      "A sad little man drifts in a kayak under a rain cloud. Confetti on arrival — cheer him up.",
+  },
 ];
