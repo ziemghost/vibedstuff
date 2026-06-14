@@ -120,6 +120,83 @@
 const cv = document.getElementById('scene');
 const cx = cv.getContext('2d');
 
+// Fox state — relative x (0..1), direction, leg phase
+const foxes = [
+  { rx: 0.12, dir: 1,  phase: 0 },
+  { rx: 0.68, dir: -1, phase: Math.PI },
+  { rx: 0.42, dir: 1,  phase: Math.PI * 0.7 },
+];
+
+function drawFox(x, y, phase, dir) {
+  // y = ground level; fox stands with feet at y
+  cx.save();
+  cx.translate(x, y);
+  cx.scale(dir, 1);   // mirror for left-facing
+
+  const sw = Math.sin(phase) * 3;
+
+  // Back legs (drawn first so body covers tops)
+  cx.fillStyle = '#c05818';
+  cx.fillRect(-13, -14 - sw, 4, 14 + sw);
+  cx.fillRect( -8, -14 + sw, 4, 14 - sw);
+
+  // Tail
+  cx.fillStyle = '#e07828';
+  cx.beginPath();
+  cx.moveTo(-10, -20);
+  cx.bezierCurveTo(-24, -16, -32, -26, -24, -38);
+  cx.bezierCurveTo(-18, -44, -8, -34, -8, -22);
+  cx.fill();
+  cx.fillStyle = '#f4e8d0';
+  cx.beginPath();
+  cx.ellipse(-24, -38, 6, 5, -0.4, 0, Math.PI * 2);
+  cx.fill();
+
+  // Body
+  cx.fillStyle = '#e07828';
+  cx.beginPath();
+  cx.ellipse(0, -20, 16, 9, 0, 0, Math.PI * 2);
+  cx.fill();
+
+  // Belly
+  cx.fillStyle = '#f4e8d0';
+  cx.beginPath();
+  cx.ellipse(2, -18, 9, 6, 0, 0, Math.PI * 2);
+  cx.fill();
+
+  // Front legs
+  cx.fillStyle = '#c05818';
+  cx.fillRect( 8, -14 + sw, 4, 14 - sw);
+  cx.fillRect(13, -14 - sw, 4, 14 + sw);
+
+  // Head
+  cx.fillStyle = '#e07828';
+  cx.beginPath();
+  cx.ellipse(16, -26, 9, 8, 0.15, 0, Math.PI * 2);
+  cx.fill();
+
+  // Muzzle
+  cx.fillStyle = '#f4e8d0';
+  cx.beginPath();
+  cx.ellipse(23, -23, 5, 4, 0.2, 0, Math.PI * 2);
+  cx.fill();
+
+  // Nose & eye
+  cx.fillStyle = '#111';
+  cx.beginPath(); cx.arc(27, -22, 1.5, 0, Math.PI * 2); cx.fill();
+  cx.beginPath(); cx.arc(20, -29, 1.5, 0, Math.PI * 2); cx.fill();
+
+  // Ears
+  cx.fillStyle = '#e07828';
+  cx.beginPath(); cx.moveTo(11,-31); cx.lineTo(7,-40); cx.lineTo(16,-32); cx.fill();
+  cx.beginPath(); cx.moveTo(17,-30); cx.lineTo(14,-39); cx.lineTo(22,-31); cx.fill();
+  cx.fillStyle = '#e87888';
+  cx.beginPath(); cx.moveTo(11,-32); cx.lineTo(9,-38); cx.lineTo(15,-33); cx.fill();
+  cx.beginPath(); cx.moveTo(17,-31); cx.lineTo(15,-37); cx.lineTo(21,-32); cx.fill();
+
+  cx.restore();
+}
+
 function resize() {
   cv.width  = Math.ceil(window.innerWidth);
   cv.height = Math.ceil(window.innerHeight);
@@ -178,6 +255,9 @@ function draw() {
   // Butterflies
   drawButterfly(W * 0.35, H * 0.48);
   drawButterfly(W * 0.60, H * 0.52);
+
+  // Foxes
+  foxes.forEach(f => drawFox(f.rx * W, ground, f.phase, f.dir));
 }
 
 function drawCloud(x, y, r) {
@@ -265,10 +345,20 @@ function animate() {
   requestAnimationFrame(animate);
 }
 
-// Redraw scene every 50ms for butterfly animation
+// Animate scene at ~30fps
 let lastDraw = 0;
 function loop(ts) {
-  if (ts - lastDraw > 50) { draw(); lastDraw = ts; }
+  if (ts - lastDraw > 33) {
+    const W = cv.width;
+    foxes.forEach(f => {
+      f.rx += f.dir * (1.4 / W);
+      f.phase += 0.14;
+      if (f.rx > 1.12) f.rx = -0.12;
+      if (f.rx < -0.12) f.rx = 1.12;
+    });
+    draw();
+    lastDraw = ts;
+  }
   requestAnimationFrame(loop);
 }
 resize();
