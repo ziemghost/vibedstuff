@@ -1,104 +1,289 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>For My Skarb 💛</title>
-  <link rel="stylesheet" href="/vibedstuff/src/styles/theme.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
   <style>
-    .heart {
-      font-size: 52px;
-      animation: pulse 2.4s ease-in-out infinite;
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0a0812; }
+    canvas#bg { position: fixed; inset: 0; z-index: 0; image-rendering: pixelated; }
+
+    .ui {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 20px 16px; gap: 0;
+      font-family: 'Press Start 2P', monospace;
     }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.12); }
+
+    .chars {
+      display: flex; align-items: flex-end; gap: 16px;
+      margin-bottom: -3px;
     }
-    .title {
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: .12em;
-      color: var(--muted);
+    canvas.sprite { image-rendering: pixelated; display: block; }
+
+    .dialog-box {
+      width: min(500px, 96vw);
+      border: 4px solid #fff;
+      background: #000;
+      padding: 20px 22px 14px;
+      position: relative;
     }
-    .compliment {
-      font-size: clamp(17px, 4.5vw, 22px);
-      line-height: 1.55;
-      text-align: center;
-      max-width: 360px;
-      min-height: 80px;
-      color: var(--fg);
-      transition: opacity .25s ease, transform .25s ease;
+    .speaker {
+      position: absolute; top: -12px; left: 14px;
+      background: #000; color: #ffe066;
+      font-size: 8px; padding: 0 8px;
+      font-family: 'Press Start 2P', monospace;
     }
-    .compliment.hidden {
-      opacity: 0;
-      transform: translateY(6px);
+    .dialog-text {
+      font-size: clamp(7px, 1.9vw, 9px);
+      color: #fff; line-height: 2.1;
+      min-height: 5.5em;
     }
-    .btn-accent {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      padding: 13px 28px;
-      font-size: 16px;
-      font-family: inherit;
-      cursor: pointer;
-      margin-top: 6px;
-      transition: opacity .15s;
+    .cur {
+      display: inline-block; width: 8px; height: 10px;
+      background: #fff; vertical-align: middle; margin-left: 2px;
+      animation: blink .65s steps(1) infinite;
     }
-    .btn-accent:hover { opacity: .88; }
-    .back { position: fixed; top: 18px; left: 18px; font-size: 13px; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+    .btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px; padding: 9px 14px;
+      background: #ffe066; color: #000; border: none; cursor: pointer;
+    }
+    .btn:hover { background: #fff; }
+
+    .back {
+      position: fixed; top: 14px; left: 14px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px; color: #444; text-decoration: none;
+    }
+    .back:hover { color: #aaa; }
+
+    .floater {
+      position: fixed; pointer-events: none;
+      font-size: 18px;
+      animation: floatup 1.4s ease-out forwards;
+    }
+    @keyframes floatup {
+      from { transform: translateY(0) scale(1); opacity: 1; }
+      to   { transform: translateY(-90px) scale(.4); opacity: 0; }
+    }
   </style>
 </head>
 <body>
-  <a class="back" href="/vibedstuff/">← vibedstuff</a>
-  <main class="page">
-    <div class="card" style="max-width:440px; width:100%; text-align:center; gap:20px;">
-      <div class="heart">💛</div>
-      <div class="title">for my skarb</div>
-      <div class="compliment" id="compliment"></div>
-      <button class="btn-accent" id="btn">Another one ✨</button>
-    </div>
-  </main>
-  <script>
-    const compliments = [
-      "You make every ordinary moment feel like something worth remembering.",
-      "Your kindness is the quiet kind — the kind that actually sticks.",
-      "The world genuinely got better the day you showed up in it.",
-      "You have this gift of making people feel completely at home.",
-      "Your laugh is one of my favourite sounds in the whole world.",
-      "You notice the little things, and that means more than you know.",
-      "You're thoughtful in ways most people don't even think to be.",
-      "Talking to you always leaves me feeling like myself again.",
-      "You bring warmth into every room you walk into, without even trying.",
-      "You're the first person I want to tell all my good news to.",
-      "You make the boring stuff feel like an adventure.",
-      "Your care for others is so real it's almost unfair to everyone else.",
-      "You're exactly who you are — and that's more than enough.",
-      "You have a heart that just quietly holds everything together.",
-      "I'm so glad you exist, and I mean that completely.",
-      "You make patience look easy, even when it isn't.",
-      "Being around you is its own kind of comfort.",
-      "You're brilliant and you never make a big deal of it.",
-      "You always know the right thing to say, even when words are hard.",
-      "Every day with you is a small gift I don't take for granted.",
-    ];
+<canvas id="bg"></canvas>
+<a class="back" href="/vibedstuff/">← BACK</a>
 
-    let last = -1;
-    const el = document.getElementById("compliment");
+<div class="ui">
+  <div class="chars">
+    <canvas class="sprite" id="c-kris"></canvas>
+    <canvas class="sprite" id="c-ralsei"></canvas>
+    <canvas class="sprite" id="c-susie"></canvas>
+  </div>
+  <div class="dialog-box">
+    <span class="speaker">RALSEI</span>
+    <div class="dialog-text" id="dtext"></div>
+    <div class="actions"><button class="btn" id="btn">▶ NEXT</button></div>
+  </div>
+</div>
 
-    function show() {
-      let idx;
-      do { idx = Math.floor(Math.random() * compliments.length); } while (idx === last);
-      last = idx;
-      el.classList.add("hidden");
-      setTimeout(() => {
-        el.textContent = compliments[idx];
-        el.classList.remove("hidden");
-      }, 260);
+<script>
+// ── Starfield ────────────────────────────────────────────────────
+const bg = document.getElementById('bg');
+const bx = bg.getContext('2d');
+let stars = [];
+function initStars() {
+  bg.width = window.innerWidth; bg.height = window.innerHeight;
+  stars = Array.from({length: 90}, () => ({
+    x: Math.random() * bg.width, y: Math.random() * bg.height,
+    s: Math.random() < 0.2 ? 2 : 1,
+    base: 0.3 + Math.random() * 0.7, t: Math.random() * Math.PI * 2,
+  }));
+}
+function drawBg() {
+  bx.fillStyle = '#0a0812';
+  bx.fillRect(0, 0, bg.width, bg.height);
+  stars.forEach(st => {
+    st.t += 0.018;
+    bx.fillStyle = `rgba(255,255,255,${st.base * (0.6 + 0.4 * Math.sin(st.t))})`;
+    bx.fillRect(st.x | 0, st.y | 0, st.s, st.s);
+  });
+  requestAnimationFrame(drawBg);
+}
+initStars();
+window.addEventListener('resize', initStars);
+requestAnimationFrame(drawBg);
+
+// ── Sprites ──────────────────────────────────────────────────────
+const T=0,K=1,W=2,G=3,R=4,P=5,Y=6,B=7,C=8,S=9;
+const PAL = [
+  null,
+  '#111111', // K black / outline
+  '#f0ece0', // W cream
+  '#2a5c1e', // G dark green (Ralsei robe)
+  '#cc3333', // R red (Ralsei scarf)
+  '#9955cc', // P purple (Susie skin)
+  '#f5e030', // Y yellow (Susie eyes)
+  '#4477cc', // B blue (Kris shirt)
+  '#e877c4', // C pink (Susie hair)
+  '#888888', // S dark (Kris hair)
+];
+
+// 10 cols × 19 rows
+const RALSEI = [
+  [0,0,1,G,1,0,0,0,0,0],
+  [0,1,G,G,G,1,0,0,0,0],
+  [1,G,G,G,G,G,1,0,0,0],
+  [1,1,1,1,1,1,1,1,0,0],
+  [0,0,1,W,W,W,1,0,0,0],
+  [0,1,W,W,W,W,W,1,0,0],
+  [0,1,W,1,W,W,1,W,1,0],
+  [0,1,W,W,W,W,W,W,1,0],
+  [0,0,1,W,W,W,W,1,0,0],
+  [0,0,1,R,R,R,R,1,0,0],
+  [0,1,R,R,R,R,R,R,1,0],
+  [0,1,G,G,G,G,G,G,1,0],
+  [1,G,G,G,G,G,G,G,G,1],
+  [1,G,G,G,G,G,G,G,G,1],
+  [0,1,G,G,G,G,G,G,1,0],
+  [0,0,1,G,1,1,G,1,0,0],
+  [0,0,1,G,1,1,G,1,0,0],
+  [0,1,G,G,1,1,G,G,1,0],
+  [0,1,1,1,0,0,1,1,1,0],
+];
+
+// 10 cols × 18 rows
+const KRIS = [
+  [0,1,S,S,S,S,S,1,0,0],
+  [0,1,S,S,S,S,S,1,0,0],
+  [0,1,W,W,W,W,W,1,0,0],
+  [1,W,W,W,W,W,W,W,1,0],
+  [1,W,1,W,W,W,1,W,1,0],
+  [1,W,W,W,W,W,W,W,1,0],
+  [0,1,W,W,W,W,W,1,0,0],
+  [0,1,B,B,B,B,B,1,0,0],
+  [1,B,W,B,W,B,W,B,1,0],
+  [1,B,W,B,W,B,W,B,1,0],
+  [0,1,B,B,B,B,B,1,0,0],
+  [0,1,K,K,K,K,K,1,0,0],
+  [0,1,K,K,K,K,K,1,0,0],
+  [0,0,1,K,1,1,K,1,0,0],
+  [0,0,1,K,1,1,K,1,0,0],
+  [0,1,K,K,1,1,K,K,1,0],
+  [0,1,1,1,0,0,1,1,1,0],
+];
+
+// 10 cols × 17 rows
+const SUSIE = [
+  [0,1,C,C,C,C,C,1,0,0],
+  [1,C,C,C,C,C,C,C,1,0],
+  [1,P,P,P,P,P,P,P,1,0],
+  [1,P,Y,P,P,P,Y,P,1,0],
+  [1,P,Y,P,P,P,Y,P,1,0],
+  [1,P,P,1,1,1,P,P,1,0],
+  [0,1,P,P,P,P,P,1,0,0],
+  [0,1,K,K,K,K,K,1,0,0],
+  [1,K,K,K,K,K,K,K,1,0],
+  [1,K,K,K,K,K,K,K,1,0],
+  [1,K,K,K,K,K,K,K,1,0],
+  [0,1,K,K,K,K,K,1,0,0],
+  [0,0,1,K,1,1,K,1,0,0],
+  [0,0,1,K,1,1,K,1,0,0],
+  [0,1,K,K,1,1,K,K,1,0],
+  [0,1,1,1,0,0,1,1,1,0],
+];
+
+function drawSprite(id, grid, scale) {
+  const el = document.getElementById(id);
+  const cols = grid[0].length, rows = grid.length;
+  el.width = cols * scale; el.height = rows * scale;
+  el.style.width = (cols * scale) + 'px'; el.style.height = (rows * scale) + 'px';
+  const ctx = el.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  grid.forEach((row, y) => row.forEach((c, x) => {
+    if (!c) return;
+    ctx.fillStyle = PAL[c];
+    ctx.fillRect(x * scale, y * scale, scale, scale);
+  }));
+}
+
+const SC = 5;
+drawSprite('c-kris',   KRIS,   SC);
+drawSprite('c-ralsei', RALSEI, SC);
+drawSprite('c-susie',  SUSIE,  SC);
+
+// ── Compliments ──────────────────────────────────────────────────
+const LINES = [
+  "You make every ordinary\nmoment feel like something\nworth remembering.",
+  "Your kindness is the quiet\nkind — the kind that\nactually sticks.",
+  "The world genuinely got\nbetter the day you showed\nup in it.",
+  "You have a gift for making\npeople feel completely\nat home.",
+  "Your laugh is one of my\nfavourite sounds in the\nwhole world.",
+  "You notice the little things,\nand that means more\nthan you know.",
+  "Being around you is its\nown kind of comfort.",
+  "You're brilliant — and you\nnever make a big deal\nof it.",
+  "You make the boring stuff\nfeel like a little adventure.",
+  "I'm so glad you exist,\nand I mean that completely.",
+  "Every day with you is a\nsmall gift I don't take\nfor granted.",
+  "You bring warmth into every\nroom you walk into,\nwithout even trying.",
+  "You're exactly who you are —\nand that's more\nthan enough.",
+  "You always know what to say,\neven when words are hard.",
+  "Your care for others is so\nreal it's almost unfair\nto everyone else.",
+];
+
+// ── Typewriter ───────────────────────────────────────────────────
+let lastIdx = -1, ticker = null, pos = 0, cur = '';
+const textEl = document.getElementById('dtext');
+const btn = document.getElementById('btn');
+
+function pick() {
+  let i; do { i = Math.floor(Math.random() * LINES.length); } while (i === lastIdx);
+  lastIdx = i; return LINES[i];
+}
+
+function startType(str) {
+  clearInterval(ticker); pos = 0; cur = str;
+  textEl.innerHTML = '<span class="cur"></span>';
+  ticker = setInterval(() => {
+    pos++;
+    const slice = cur.slice(0, pos).replace(/\n/g, '<br>');
+    textEl.innerHTML = pos < cur.length
+      ? slice + '<span class="cur"></span>'
+      : slice;
+    if (pos >= cur.length) { clearInterval(ticker); ticker = null; }
+  }, 42);
+}
+
+btn.addEventListener('click', () => {
+  if (ticker) {
+    clearInterval(ticker); ticker = null;
+    pos = cur.length;
+    textEl.innerHTML = cur.replace(/\n/g, '<br>');
+  } else {
+    ['♡','✨','★'][Math.floor(Math.random()*3)];
+    const hearts = ['♡','♡','✨','★'];
+    for (let i = 0; i < 3; i++) {
+      const f = document.createElement('span');
+      f.className = 'floater';
+      f.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+      f.style.left = (15 + Math.random() * 70) + 'vw';
+      f.style.bottom = '25vh';
+      f.style.color = ['#ffe066','#ff88bb','#88ddff','#aaffaa'][Math.floor(Math.random()*4)];
+      f.style.animationDelay = (i * 0.15) + 's';
+      document.body.appendChild(f);
+      setTimeout(() => f.remove(), 1600);
     }
+    startType(pick());
+  }
+});
 
-    document.getElementById("btn").addEventListener("click", show);
-    show();
-  </script>
+startType(pick());
+</script>
 </body>
 </html>
