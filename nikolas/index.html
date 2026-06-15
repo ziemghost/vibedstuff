@@ -59,8 +59,15 @@
     .clock.live{color:var(--accent2)}
     .status{margin-top:10px;font-size:13.5px;color:var(--muted);min-height:20px}
     .status b{color:var(--fg);font-weight:600}
-    .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
-    @media(max-width:420px){.actions{grid-template-columns:1fr}}
+    .actions{margin-top:18px}
+    .adjust{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:16px}
+    .adjust .exp{font-size:11.5px;color:var(--muted);text-align:center;line-height:1.45}
+    .adjust .exp b{display:inline-block;color:var(--fg);font-family:var(--mono);font-size:18px;font-weight:600;margin-top:2px}
+    .step{width:46px;height:46px;border-radius:11px;border:1px solid var(--line2);background:var(--panel2);
+      color:var(--fg);font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;flex:none}
+    .step:hover{border-color:var(--accent);color:#fff}
+    .step:active{transform:translateY(1px)}
+    .btn.primary{width:100%}
     .btn{border:1px solid var(--line2);border-radius:10px;padding:14px 14px;font-size:14.5px;font-weight:600;
       font-family:inherit;cursor:pointer;color:var(--fg);background:var(--panel2);transition:all .14s ease}
     .btn:hover{border-color:var(--accent);color:#fff}
@@ -137,10 +144,14 @@
     <div class="panel">
       <div class="head"><div class="t">ELAPSED SINCE EXPECTED ARRIVAL</div></div>
       <div class="clock" id="timer">00:00</div>
-      <div class="status" id="status">No active incident. Start the SLA clock the moment he's due.</div>
+      <div class="status" id="status">No active incident. Hit start the moment he's due.</div>
+      <div class="adjust" id="adjust" hidden>
+        <button class="step" id="minus" aria-label="expected 5 minutes earlier">−5m</button>
+        <div class="exp">Expected arrival<br><b id="expLabel">--:--</b></div>
+        <button class="step" id="plus" aria-label="expected 5 minutes later">+5m</button>
+      </div>
       <div class="actions">
-        <button class="btn primary" id="startBtn">Start SLA clock</button>
-        <button class="btn" id="arriveBtn" disabled>Log his arrival</button>
+        <button class="btn primary" id="toggleBtn">Start tracking</button>
       </div>
     </div>
 
@@ -171,8 +182,14 @@
     const API="https://46-62-200-155.sslip.io";
     const LS="nikolas_start_ms";
     const $=(id)=>document.getElementById(id);
-    const startBtn=$("startBtn"),arriveBtn=$("arriveBtn"),timerEl=$("timer"),statusEl=$("status"),
-          pill=$("statusPill"),pillTxt=$("pillTxt");
+    const toggleBtn=$("toggleBtn"),timerEl=$("timer"),statusEl=$("status"),
+          pill=$("statusPill"),pillTxt=$("pillTxt"),
+          adjustEl=$("adjust"),expLabel=$("expLabel"),minusBtn=$("minus"),plusBtn=$("plus");
+    const STEP=5*60*1000;
+    const round5=(ms)=>Math.round(ms/STEP)*STEP;
+    const expectedMs=()=>Number(localStorage.getItem(LS));
+    function hhmm(ms){const d=new Date(ms);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
+    function updateExp(){const e=expectedMs();if(e)expLabel.textContent=hhmm(e);}
 
     function fmt(ms){ms=Math.max(0,Math.round(ms/1000));
       const h=Math.floor(ms/3600),m=Math.floor((ms%3600)/60),s=ms%60;
@@ -206,29 +223,50 @@
       return ["Critical","bad"];}
 
     let raf=null;
-    function tick(){const start=Number(localStorage.getItem(LS));if(!start)return;
-      const el=Date.now()-start;timerEl.textContent=clock(el);statusEl.textContent=liveStatus(el/1000);
-      raf=requestAnimationFrame(tick);}
-    function goLive(){timerEl.classList.add("live");pill.classList.add("live");pillTxt.textContent="BREACH";
-      startBtn.disabled=true;arriveBtn.disabled=false;cancelAnimationFrame(raf);tick();}
-    function goIdle(){timerEl.classList.remove("live");pill.classList.remove("live");pillTxt.textContent="IDLE";
-      timerEl.textContent="00:00";startBtn.disabled=false;arriveBtn.disabled=true;cancelAnimationFrame(raf);
-      statusEl.textContent="No active incident. Start the SLA clock the moment he's due.";}
+    function paintLive(){const e=expectedMs();if(!e)return;
+      const el=Date.now()-e;
+      if(el<0){timerEl.textContent="00:00";statusEl.textContent=`Not due yet — expected ${hhmm(e)}. Use −/+ to fix.`;}
+      else{timerEl.textContent=clock(el);statusEl.textContent=liveStatus(el/1000);}}
+    function tick(){if(!expectedMs())return;paintLive();raf=requestAnimationFrame(tick);}
+    function goLive(){timerEl.classList.add("live");pill.classList.add("live");pillTxt.textContent="TRACKING";
+      toggleBtn.textContent="He's here — stop & log";adjustEl.hidden=false;updateExp();
+      cancelAnimationFrame(raf);tick();}
+    function goIdle(){if(expectedMs())return; // a new session started; don't clobber it
+      timerEl.classList.remove("live");pill.classList.remove("live");pillTxt.textContent="IDLE";
+      timerEl.textContent="00:00";adjustEl.hidden=true;toggleBtn.textContent="Start tracking";cancelAnimationFrame(raf);
+      statusEl.textContent="No active incident. Hit start the moment he's due.";}
 
-    startBtn.addEventListener("click",()=>{localStorage.setItem(LS,String(Date.now()));goLive();});
-    arriveBtn.addEventListener("click",async()=>{
-      const start=Number(localStorage.getItem(LS));if(!start)return;
-      const arrived=Date.now();const lateSec=Math.max(0,(arrived-start)/1000);
-      localStorage.removeItem(LS);arriveBtn.disabled=true;
-      timerEl.textContent=clock(arrived-start);timerEl.classList.remove("live");
+    function adjust(delta){
+      let e=expectedMs();if(!e)return;
+      e=round5(e+delta);
+      const now=Date.now();
+      if(e>now)e=round5(now);                       // can't expect him in the future
+      if(e<now-12*3600*1000)e=now-12*3600*1000;     // sanity floor: 12h
+      localStorage.setItem(LS,String(e));
+      updateExp();paintLive();
+    }
+    minusBtn.addEventListener("click",()=>adjust(-STEP));
+    plusBtn.addEventListener("click",()=>adjust(+STEP));
+
+    toggleBtn.addEventListener("click",async()=>{
+      if(!expectedMs()){                            // START
+        localStorage.setItem(LS,String(round5(Date.now())));
+        goLive();
+        return;
+      }
+      // STOP + log
+      const e=expectedMs();const arrived=Date.now();const late=Math.max(0,arrived-e);
+      localStorage.removeItem(LS);
+      timerEl.textContent=clock(late);timerEl.classList.remove("live");
       pill.classList.remove("live");pillTxt.textContent="CLOSED";
-      statusEl.textContent=resultStatus(lateSec);
-      toast(`Incident closed · ${fmt(arrived-start)} delay`);
+      adjustEl.hidden=true;toggleBtn.textContent="Start tracking";
+      statusEl.textContent=resultStatus(late/1000);
+      toast(`Incident closed · ${fmt(late)} delay`);
       try{const r=await fetch(`${API}/api/nikolas/log`,{method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({expected_ms:start,arrived_ms:arrived})});
+        body:JSON.stringify({expected_ms:e,arrived_ms:arrived})});
         if(!r.ok)throw new Error("HTTP "+r.status);render(await r.json());
-      }catch(e){console.error(e);toast("Write failed — incident not persisted");}
+      }catch(err){console.error(err);toast("Write failed — incident not persisted");}
       setTimeout(goIdle,4500);
     });
 
