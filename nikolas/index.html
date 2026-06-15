@@ -314,7 +314,7 @@
       if(n<10)return "Pattern detected. Now formally tracked.";
       if(n<25)return "Trend: upward. Recommended action: he stops. Likelihood: nil.";
       if(n<50)return "Escalation advised. An intervention is overdue.";
-      if(n<100)return "Recommendation on file: <b>text her back</b>.";
+      if(n<100)return "Recommendation on file: <b>do not, under any circumstances, contact her</b>.";
       return "This metric is no longer diagnostic — it's a cry for help.";}
     function nellyRender(n){nellyN.textContent=n;nellyFill.style.width=Math.min(100,n*2)+"%";nellyCap.innerHTML=nellyNote(n);}
     const HEARTS=["💔","💔","💔","💔","😭","🥀","💧","💀","🚩"];
