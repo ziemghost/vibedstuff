@@ -90,6 +90,19 @@
       font-size:11.5px;color:var(--dim);line-height:1.6}
     .foot code{font-family:var(--mono);color:var(--muted)}
 
+    /* floating Nelly button */
+    .fab{position:fixed;right:16px;bottom:18px;z-index:20;display:flex;align-items:center;gap:9px;
+      background:linear-gradient(135deg,#f87171,#dc2626);color:#fff;border:none;border-radius:999px;
+      padding:14px 18px;font-family:inherit;font-size:14.5px;font-weight:700;cursor:pointer;
+      box-shadow:0 10px 30px rgba(220,38,38,.45);transition:transform .12s ease,filter .15s}
+    .fab:hover{filter:brightness(1.08)}
+    .fab:active{transform:scale(.9)}
+    .fab.pop{animation:fabpop .42s ease}
+    @keyframes fabpop{0%{transform:scale(1)}35%{transform:scale(1.18)}100%{transform:scale(1)}}
+    .fab .fe{font-size:19px;line-height:1}
+    @media(max-width:430px){.fab .ft{display:none}.fab{padding:16px;font-size:22px}}
+    .particle{position:fixed;pointer-events:none;z-index:40;font-size:24px;will-change:transform,opacity}
+
     .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(120px);
       background:var(--panel2);border:1px solid var(--line2);color:var(--fg);padding:11px 16px;border-radius:10px;
       font-size:13.5px;font-weight:500;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:transform .32s cubic-bezier(.2,1.2,.4,1);
@@ -138,7 +151,7 @@
     <div class="nelly">
       <div class="row">
         <div><div class="lab">Times he's brought up Nelly</div><div class="num" id="nellyN">0</div></div>
-        <button class="btn ghost" id="nellyBtn">+ Nelly mentioned</button>
+        <div class="lab" style="text-align:right;max-width:150px">Logged via the 💔 button →</div>
       </div>
       <div class="meter"><i id="nellyFill"></i></div>
       <div class="note" id="nellyCap">His ex. Per his own statement, he is <b>completely over her</b>.</div>
@@ -149,6 +162,7 @@
       he has no access to. Data is global and shared — one subject, one ledger.
     </div>
   </div>
+  <button class="fab" id="nellyBtn" aria-label="Nelly mentioned"><span class="fe">💔</span><span class="ft">Nelly mentioned</span></button>
   <div class="toast" id="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
@@ -259,7 +273,27 @@
       if(n<100)return "Recommendation on file: <b>text her back</b>.";
       return "This metric is no longer diagnostic — it's a cry for help.";}
     function nellyRender(n){nellyN.textContent=n;nellyFill.style.width=Math.min(100,n*2)+"%";nellyCap.innerHTML=nellyNote(n);}
+    const HEARTS=["💔","💔","💔","💔","😭","🥀","💧","💀","🚩"];
+    function explode(){
+      const r=nellyBtn.getBoundingClientRect();
+      const cx=r.left+r.width/2, cy=r.top+r.height/2;
+      for(let i=0;i<22;i++){
+        const p=document.createElement("span");
+        p.className="particle";p.textContent=HEARTS[Math.floor(Math.random()*HEARTS.length)];
+        p.style.left=cx+"px";p.style.top=cy+"px";
+        document.body.appendChild(p);
+        const ang=Math.random()*Math.PI*2, dist=70+Math.random()*150;
+        const dx=Math.cos(ang)*dist, dy=Math.sin(ang)*dist-(50+Math.random()*70);
+        const rot=(Math.random()*2-1)*220, sc=.5+Math.random()*.8, dur=700+Math.random()*650;
+        p.animate([
+          {transform:"translate(-50%,-50%) translate(0,0) rotate(0) scale(1)",opacity:1},
+          {transform:`translate(-50%,-50%) translate(${dx}px,${dy}px) rotate(${rot}deg) scale(${sc})`,opacity:0}
+        ],{duration:dur,easing:"cubic-bezier(.15,.6,.3,1)"}).onfinish=()=>p.remove();
+      }
+    }
     nellyBtn.addEventListener("click",async()=>{
+      explode();
+      nellyBtn.classList.remove("pop");void nellyBtn.offsetWidth;nellyBtn.classList.add("pop");
       try{const r=await fetch(`${API}/api/counter/nelly/add_one`,{method:"POST"});
         if(!r.ok)throw new Error("HTTP "+r.status);const d=await r.json();
         nellyRender(d.value);toast(`Nelly mention #${d.value} logged`);
