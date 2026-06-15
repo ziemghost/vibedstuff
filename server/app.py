@@ -10,6 +10,7 @@ import threading
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 DB_PATH = os.environ.get("SMOLBACK_DB", "/opt/smolback/data/smol.db")
 ALLOWED_ORIGINS = [
@@ -21,6 +22,11 @@ ALLOWED_ORIGINS = [
 PAGE_SIZE = 4096
 MAX_PAGES = (1 * 1024 * 1024 * 1024) // PAGE_SIZE  # hard ~1 GiB ceiling
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+# Sane bounds for the Nikolas late-tracker (epoch milliseconds).
+TS_MIN_MS = 1_000_000_000_000   # ~2001
+TS_MAX_MS = 4_000_000_000_000   # ~2096
+MAX_LATE_MS = 30 * 24 * 60 * 60 * 1000  # cap a single lateness at 30 days
 
 _lock = threading.Lock()
 
@@ -39,6 +45,15 @@ def init_db():
         "CREATE TABLE IF NOT EXISTS counters ("
         "  name TEXT PRIMARY KEY,"
         "  value INTEGER NOT NULL DEFAULT 0"
+        ")"
+    )
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS nikolas_late ("
+        "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  expected_ms INTEGER NOT NULL,"
+        "  arrived_ms INTEGER NOT NULL,"
+        "  late_ms INTEGER NOT NULL,"
+        "  created_at TEXT NOT NULL DEFAULT (datetime('now'))"
         ")"
     )
     con.commit()
@@ -108,3 +123,75 @@ def add_one(name: str, request: Request):
             raise HTTPException(status_code=507, detail="storage limit reached")
         raise
     return {"name": name, "value": value}
+
+
+# ── Nikolas late-tracker ──────────────────────────────────────────────────
+# Two-button toy: front-end records when Nikolas *should* have been there
+# (expected_ms) and when he actually showed (arrived_ms); we store one row
+# per incident and serve aggregate stats for the graph.
+
+class LateLog(BaseModel):
+    expected_ms: int
+    arrived_ms: int
+
+
+def _valid_ts(ms: int):
+    if not isinstance(ms, int) or not (TS_MIN_MS <= ms <= TS_MAX_MS):
+        raise HTTPException(status_code=400, detail="timestamp out of range")
+
+
+def _nikolas_stats(con):
+    rows = con.execute(
+        "SELECT id, expected_ms, arrived_ms, late_ms FROM nikolas_late ORDER BY id"
+    ).fetchall()
+    events = [
+        {"id": r[0], "expected_ms": r[1], "arrived_ms": r[2], "late_ms": r[3]}
+        for r in rows
+    ]
+    count = len(events)
+    total = sum(e["late_ms"] for e in events)
+    worst = max((e["late_ms"] for e in events), default=0)
+    return {
+        "count": count,
+        "total_wasted_ms": total,
+        "avg_late_ms": (total / count) if count else 0,
+        "worst_late_ms": worst,
+        "events": events,
+    }
+
+
+@app.get("/api/nikolas/stats")
+def nikolas_stats(request: Request):
+    enforce_origin(request)
+    with _lock:
+        con = connect()
+        stats = _nikolas_stats(con)
+        con.close()
+    return stats
+
+
+@app.post("/api/nikolas/log")
+def nikolas_log(body: LateLog, request: Request):
+    enforce_origin(request)
+    _valid_ts(body.expected_ms)
+    _valid_ts(body.arrived_ms)
+    late = body.arrived_ms - body.expected_ms
+    if late < 0:
+        late = 0
+    if late > MAX_LATE_MS:
+        raise HTTPException(status_code=400, detail="lateness implausibly large")
+    try:
+        with _lock:
+            con = connect()
+            con.execute(
+                "INSERT INTO nikolas_late(expected_ms, arrived_ms, late_ms) VALUES(?,?,?)",
+                (body.expected_ms, body.arrived_ms, late),
+            )
+            con.commit()
+            stats = _nikolas_stats(con)
+            con.close()
+    except sqlite3.OperationalError as e:
+        if "full" in str(e).lower() or "max_page_count" in str(e).lower():
+            raise HTTPException(status_code=507, detail="storage limit reached")
+        raise
+    return {"logged_late_ms": late, **stats}

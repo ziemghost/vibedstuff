@@ -4,4 +4,5 @@ export const apps = [
   { slug: "chord-trainer", title: "Maj7 / m7 Chord Cycle Trainer" },
   { slug: "counter", title: "Visit Counter (stateful POC)" },
   { slug: "skarb", title: "For My Skarb 💛" },
+  { slug: "nikolas", title: "Is Nikolas Late? ⏱️" },
 ];

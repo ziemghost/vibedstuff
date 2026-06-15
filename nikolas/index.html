@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+  <title>Is Nikolas Late? (yes)</title>
+  <meta name="description" content="A scientific instrument for measuring exactly how late Nikolas is." />
+  <style>
+    :root{
+      --bg:#0f1117; --panel:#181b22; --panel2:#1f232c; --fg:#f2f4f7; --muted:#8a93a2;
+      --accent:#e8590c; --accent2:#ffb454; --good:#37b24d; --bad:#ff6b6b; --border:#2a2e36;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;min-height:100%}
+    body{
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(232,89,12,.15), transparent 60%),
+        radial-gradient(1000px 500px at 110% 10%, rgba(255,180,84,.10), transparent 55%),
+        var(--bg);
+      color:var(--fg);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      -webkit-font-smoothing:antialiased;
+      background-attachment:fixed;
+    }
+    .back{position:fixed;top:14px;left:16px;font-size:13px;color:var(--muted);text-decoration:none;z-index:5}
+    .back:hover{color:var(--accent)}
+    .wrap{max-width:640px;margin:0 auto;padding:56px 18px 64px;display:flex;flex-direction:column;gap:22px}
+    header{text-align:center}
+    h1{font-size:clamp(28px,8vw,44px);margin:0;letter-spacing:-.03em;line-height:1}
+    h1 .lol{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .sub{color:var(--muted);font-size:14px;margin-top:10px;min-height:20px;transition:opacity .2s}
+
+    /* live timer */
+    .stage{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
+      border-radius:22px;padding:26px 20px;box-shadow:0 18px 50px rgba(0,0,0,.45);text-align:center;position:relative;overflow:hidden}
+    .stage.live{animation:breathe 2.4s ease-in-out infinite}
+    @keyframes breathe{0%,100%{box-shadow:0 18px 50px rgba(0,0,0,.45)}50%{box-shadow:0 18px 60px rgba(232,89,12,.35)}}
+    .timer{font-size:clamp(40px,14vw,72px);font-weight:800;letter-spacing:-.04em;line-height:1;
+      font-variant-numeric:tabular-nums;color:var(--accent2);text-shadow:0 0 30px rgba(255,180,84,.25)}
+    .timer.idle{color:var(--muted);text-shadow:none}
+    .verdict{margin-top:12px;font-size:15px;color:var(--fg);min-height:22px;font-weight:600}
+
+    /* buttons */
+    .btns{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:420px){.btns{grid-template-columns:1fr}}
+    .big{border:none;border-radius:16px;padding:20px 16px;font-size:17px;font-weight:700;font-family:inherit;
+      cursor:pointer;color:#fff;transition:transform .08s ease,filter .15s ease,opacity .2s;display:flex;
+      flex-direction:column;gap:4px;align-items:center;line-height:1.15}
+    .big small{font-weight:500;opacity:.85;font-size:12px}
+    .big:active{transform:scale(.96)}
+    .big:disabled{opacity:.35;cursor:not-allowed;filter:grayscale(.4)}
+    .start{background:linear-gradient(135deg,#3a4150,#262b34);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+    .start:not(:disabled):hover{filter:brightness(1.15)}
+    .arrive{background:linear-gradient(135deg,var(--accent),#c64708);box-shadow:0 8px 24px rgba(232,89,12,.4)}
+    .arrive:not(:disabled){animation:wiggle 1.6s ease-in-out infinite}
+    @keyframes wiggle{0%,92%,100%{transform:rotate(0)}94%{transform:rotate(-1.2deg)}96%{transform:rotate(1.2deg)}98%{transform:rotate(-.6deg)}}
+
+    /* stats */
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    @media(max-width:480px){.stats{grid-template-columns:1fr 1fr}}
+    .stat{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center}
+    .stat .v{font-size:clamp(18px,5.5vw,26px);font-weight:800;letter-spacing:-.02em;color:var(--accent2);font-variant-numeric:tabular-nums}
+    .stat .k{font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
+
+    .graphcard{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:16px 14px 10px}
+    .graphcard h2{font-size:13px;color:var(--muted);margin:0 0 8px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+    .chartbox{position:relative;height:200px}
+    .foot{text-align:center;color:var(--muted);font-size:12px;line-height:1.6}
+    /* nelly heartbreak card */
+    .nelly{background:linear-gradient(135deg,rgba(255,107,107,.14),rgba(232,89,12,.06)),var(--panel);
+      border:1px solid #4a2230;border-radius:18px;padding:16px 16px 14px}
+    .nelly-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .nelly-n{font-size:clamp(30px,9vw,44px);font-weight:800;letter-spacing:-.03em;color:var(--bad);
+      line-height:1;font-variant-numeric:tabular-nums}
+    .nelly-k{font-size:11px;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:.05em}
+    .nelly-btn{border:none;border-radius:14px;padding:14px 16px;font-size:15px;font-weight:700;font-family:inherit;
+      color:#fff;cursor:pointer;background:linear-gradient(135deg,#ff6b6b,#c64708);box-shadow:0 8px 22px rgba(255,107,107,.3);
+      transition:transform .08s ease,filter .15s}
+    .nelly-btn:hover{filter:brightness(1.1)}
+    .nelly-btn:active{transform:scale(.95)}
+    .nelly-btn.pop{animation:pop .4s ease}
+    @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
+    .nelly-bar{height:8px;border-radius:999px;background:#2a2e36;margin:14px 0 10px;overflow:hidden}
+    .nelly-fill{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,var(--accent2),var(--bad));transition:width .6s cubic-bezier(.2,1,.3,1)}
+    .nelly-cap{font-size:13px;color:var(--fg);font-weight:600;min-height:18px}
+    .nelly-cap em{color:var(--accent2);font-style:italic}
+
+    .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(120px);
+      background:var(--panel2);border:1px solid var(--accent);color:var(--fg);padding:12px 18px;border-radius:12px;
+      font-size:14px;font-weight:600;box-shadow:0 12px 40px rgba(0,0,0,.5);transition:transform .35s cubic-bezier(.2,1.4,.4,1);max-width:90vw;text-align:center;z-index:9}
+    .toast.show{transform:translateX(-50%) translateY(0)}
+  </style>
+</head>
+<body>
+  <a class="back" href="/vibedstuff/">← vibedstuff</a>
+  <div class="wrap">
+    <header>
+      <h1>Is Nikolas <span class="lol">late</span>?</h1>
+      <div class="sub" id="sub">Spoiler: historically, yes.</div>
+    </header>
+
+    <div class="stage" id="stage">
+      <div class="timer idle" id="timer">—:—</div>
+      <div class="verdict" id="verdict">Press the button the moment he was supposed to be here.</div>
+    </div>
+
+    <div class="btns">
+      <button class="big start" id="startBtn">🕐 He should be here<small>start the clock of shame</small></button>
+      <button class="big arrive" id="arriveBtn" disabled>😤 He's here!<small>stop it &amp; log the damage</small></button>
+    </div>
+
+    <div class="nelly" id="nellyCard">
+      <div class="nelly-top">
+        <div>
+          <div class="nelly-n" id="nellyN">0</div>
+          <div class="nelly-k">times he's brought up Nelly</div>
+        </div>
+        <button class="nelly-btn" id="nellyBtn">💔 Nelly mentioned</button>
+      </div>
+      <div class="nelly-bar"><div class="nelly-fill" id="nellyFill"></div></div>
+      <div class="nelly-cap" id="nellyCap">His ex. He's <em>completely</em> over her, he says.</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="v" id="sCount">0</div><div class="k">incidents</div></div>
+      <div class="stat"><div class="v" id="sAvg">–</div><div class="k">avg late</div></div>
+      <div class="stat"><div class="v" id="sTotal">–</div><div class="k">total wasted</div></div>
+      <div class="stat"><div class="v" id="sWorst">–</div><div class="k">personal worst</div></div>
+      <div class="stat"><div class="v" id="sLife">–</div><div class="k">of your life</div></div>
+      <div class="stat"><div class="v" id="sRep">–</div><div class="k">reputation</div></div>
+    </div>
+
+    <div class="graphcard">
+      <h2>The lateness curve 📈</h2>
+      <div class="chartbox"><canvas id="chart"></canvas></div>
+    </div>
+
+    <p class="foot">Every incident is permanently recorded in a SQLite database he cannot reach.<br/>Data is shared & global — one Nikolas, one source of truth.</p>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script>
+  (function(){
+    const API = "https://46-62-200-155.sslip.io";
+    const LS = "nikolas_start_ms";
+    const $ = (id)=>document.getElementById(id);
+    const startBtn=$("startBtn"), arriveBtn=$("arriveBtn"), timerEl=$("timer"),
+          verdictEl=$("verdict"), stageEl=$("stage"), subEl=$("sub");
+
+    function fmt(ms){
+      ms=Math.max(0,Math.round(ms/1000));
+      const h=Math.floor(ms/3600), m=Math.floor((ms%3600)/60), s=ms%60;
+      if(h>0) return `${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
+      if(m>0) return `${m}m ${String(s).padStart(2,"0")}s`;
+      return `${s}s`;
+    }
+    function clock(ms){
+      ms=Math.max(0,Math.round(ms/1000));
+      const h=Math.floor(ms/3600), m=Math.floor((ms%3600)/60), s=ms%60;
+      const mm=String(m).padStart(2,"0"), ss=String(s).padStart(2,"0");
+      return h>0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+    }
+    function liveSnark(sec){
+      if(sec<10) return "The clock of shame has begun. ⏱️";
+      if(sec<60) return "He's “on his way.” We both know what that means.";
+      if(sec<300) return "Fashionably late. Allegedly fashionable.";
+      if(sec<900) return "Texted “5 min” 11 minutes ago.";
+      if(sec<1800) return "This is just who he is now.";
+      if(sec<3600) return "Should we order without him? (yes)";
+      return "He's not coming, is he. 🫠";
+    }
+    function resultSnark(sec){
+      if(sec<30) return "Suspiciously punctual. Did he peek at this page?";
+      if(sec<120) return "Barely late. Don't let it go to his head.";
+      if(sec<600) return `Logged. ${fmt(sec*1000)} you'll never get back.`;
+      if(sec<1800) return "A classic Nikolas. Textbook.";
+      if(sec<3600) return "Bold. Disrespectful, but bold.";
+      return "Legendary. This one goes in the museum.";
+    }
+    function repCard(avgSec){
+      if(avgSec===0) return "unrated";
+      if(avgSec<120) return "tolerable";
+      if(avgSec<600) return "shaky";
+      if(avgSec<1800) return "infamous";
+      return "cooked";
+    }
+
+    // ---- live timer ----
+    let raf=null;
+    function tick(){
+      const start=Number(localStorage.getItem(LS));
+      if(!start){return;}
+      const el=Date.now()-start;
+      timerEl.textContent=clock(el);
+      verdictEl.textContent=liveSnark(el/1000);
+      raf=requestAnimationFrame(tick);
+    }
+    function goLive(){
+      stageEl.classList.add("live");
+      timerEl.classList.remove("idle");
+      startBtn.disabled=true; arriveBtn.disabled=false;
+      subEl.textContent="The clock is running. He is, presumably, not.";
+      cancelAnimationFrame(raf); tick();
+    }
+    function goIdle(){
+      stageEl.classList.remove("live");
+      timerEl.classList.add("idle");
+      timerEl.textContent="—:—";
+      startBtn.disabled=false; arriveBtn.disabled=true;
+      cancelAnimationFrame(raf);
+    }
+
+    startBtn.addEventListener("click",()=>{
+      localStorage.setItem(LS,String(Date.now()));
+      goLive();
+    });
+
+    arriveBtn.addEventListener("click",async()=>{
+      const start=Number(localStorage.getItem(LS));
+      if(!start) return;
+      const arrived=Date.now();
+      const lateSec=Math.max(0,(arrived-start)/1000);
+      localStorage.removeItem(LS);
+      arriveBtn.disabled=true;
+      timerEl.textContent=clock(arrived-start);
+      stageEl.classList.remove("live");
+      verdictEl.textContent=resultSnark(lateSec);
+      toast(`📌 Logged: ${fmt((arrived-start))} late.`);
+      try{
+        const r=await fetch(`${API}/api/nikolas/log`,{
+          method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({expected_ms:start,arrived_ms:arrived})
+        });
+        if(!r.ok) throw new Error("HTTP "+r.status);
+        render(await r.json());
+      }catch(e){
+        console.error(e);
+        toast("Couldn't reach the database 😢 (logged nowhere)");
+      }
+      setTimeout(goIdle,4000);
+    });
+
+    // ---- stats + chart ----
+    let chart=null;
+    function setText(id,v){$(id).textContent=v;}
+    function animateNumber(id,to){
+      const el=$(id); const from=0; const dur=900; const t0=performance.now();
+      function step(t){const p=Math.min(1,(t-t0)/dur);const e=1-Math.pow(1-p,3);
+        el.textContent=Math.round(from+(to-from)*e);if(p<1)requestAnimationFrame(step);}
+      requestAnimationFrame(step);
+    }
+    function lifePct(totalMs){
+      // % of a 30-year-old's waking life, purely to be mean
+      const wakingYears=30*(16/24);
+      const pct=(totalMs/ (wakingYears*365*24*3600*1000))*100;
+      if(pct<0.0001) return "~0%";
+      return pct.toFixed(pct<0.01?4:2)+"%";
+    }
+    function render(stats){
+      const c=stats.count||0;
+      animateNumber("sCount",c);
+      setText("sAvg", c?fmt(stats.avg_late_ms):"–");
+      setText("sTotal", c?fmt(stats.total_wasted_ms):"–");
+      setText("sWorst", c?fmt(stats.worst_late_ms):"–");
+      setText("sLife", c?lifePct(stats.total_wasted_ms):"–");
+      setText("sRep", repCard((stats.avg_late_ms||0)/1000));
+      drawChart(stats.events||[]);
+    }
+    function drawChart(events){
+      const labels=events.map((_,i)=>"#"+(i+1));
+      const data=events.map(e=>+(e.late_ms/60000).toFixed(2)); // minutes
+      const ctx=$("chart").getContext("2d");
+      const grad=ctx.createLinearGradient(0,0,0,200);
+      grad.addColorStop(0,"rgba(255,180,84,.95)");
+      grad.addColorStop(1,"rgba(232,89,12,.55)");
+      if(chart){chart.data.labels=labels;chart.data.datasets[0].data=data;chart.update();return;}
+      chart=new Chart(ctx,{
+        type:"bar",
+        data:{labels,datasets:[{label:"minutes late",data,backgroundColor:grad,
+          borderRadius:8,borderSkipped:false,maxBarThickness:46}]},
+        options:{
+          responsive:true,maintainAspectRatio:false,
+          animation:{duration:1100,easing:"easeOutQuart"},
+          plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>fmt(c.parsed.y*60000)+" late"}}},
+          scales:{
+            x:{grid:{display:false},ticks:{color:"#8a93a2",font:{size:11}}},
+            y:{grid:{color:"rgba(255,255,255,.06)"},ticks:{color:"#8a93a2",font:{size:11},callback:(v)=>v+"m"},beginAtZero:true}
+          }
+        }
+      });
+    }
+
+    let toastT=null;
+    function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");
+      clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),3200);}
+
+    // ---- Nelly counter (reuses the generic counter table) ----
+    const nellyBtn=$("nellyBtn"), nellyN=$("nellyN"), nellyFill=$("nellyFill"), nellyCap=$("nellyCap");
+    function nellySnark(n){
+      if(n===0) return "His ex. He's <em>completely</em> over her, he says.";
+      if(n<5) return "Came up <em>naturally</em> in conversation. Sure.";
+      if(n<10) return "Okay, we're officially keeping count.";
+      if(n<25) return "He really, <em>really</em> needs to stop. He won't.";
+      if(n<50) return "Someone please stage an intervention.";
+      if(n<100) return "At this point just <em>text her back</em>.";
+      return "This is no longer a counter, it's a cry for help.";
+    }
+    function nellyRender(n){
+      nellyN.textContent=n;
+      nellyFill.style.width=Math.min(100,n*2)+"%";
+      nellyCap.innerHTML=nellySnark(n);
+    }
+    nellyBtn.addEventListener("click",async()=>{
+      nellyBtn.classList.remove("pop");void nellyBtn.offsetWidth;nellyBtn.classList.add("pop");
+      try{
+        const r=await fetch(`${API}/api/counter/nelly/add_one`,{method:"POST"});
+        if(!r.ok) throw new Error("HTTP "+r.status);
+        const d=await r.json();
+        nellyRender(d.value);
+        toast(d.value===1?"💔 First Nelly mention logged.":`💔 That's ${d.value} Nelly mentions.`);
+      }catch(e){console.error(e);toast("Couldn't log it 😢 (server napping)");}
+    });
+
+    // ---- boot ----
+    if(localStorage.getItem(LS)) goLive();
+    fetch(`${API}/api/nikolas/stats`,{headers:{}})
+      .then(r=>r.ok?r.json():Promise.reject(r.status))
+      .then(render)
+      .catch(e=>{console.error(e);subEl.textContent="(stats server is napping — local timer still works)";drawChart([]);});
+    fetch(`${API}/api/counter/nelly`)
+      .then(r=>r.ok?r.json():Promise.reject(r.status))
+      .then(d=>nellyRender(d.value))
+      .catch(e=>console.error(e));
+  })();
+  </script>
+</body>
+</html>
