@@ -86,6 +86,9 @@
     .nelly .lab{font-size:12px;color:var(--muted);font-weight:600}
     .nelly .num{font-family:var(--mono);font-size:clamp(26px,8vw,38px);font-weight:600;color:var(--bad);
       line-height:1;font-variant-numeric:tabular-nums;margin-top:6px}
+    .nelly .bignum{font-family:var(--mono);font-weight:700;color:var(--bad);text-align:center;
+      font-size:clamp(72px,24vw,168px);line-height:1;font-variant-numeric:tabular-nums;
+      margin:8px 0 6px;text-shadow:0 0 44px rgba(248,113,113,.32)}
     .btn.ghost{background:transparent;border-color:var(--line2);color:var(--muted);padding:11px 14px;font-size:13.5px}
     .btn.ghost:hover{color:var(--fg);border-color:var(--bad)}
     .meter{height:6px;border-radius:999px;background:var(--line);margin:14px 0 9px;overflow:hidden}
@@ -161,12 +164,10 @@
 
     <div class="section">Secondary metric · unresolved attachment</div>
     <div class="nelly">
-      <div class="row">
-        <div><div class="lab">Times he's brought up Nelly</div><div class="num" id="nellyN">0</div></div>
-        <div class="lab" style="text-align:right;max-width:150px">Logged via the 💔 button →</div>
-      </div>
+      <div class="lab" style="text-align:center">Times he's brought up Nelly</div>
+      <div class="bignum" id="nellyN">0</div>
       <div class="meter"><i id="nellyFill"></i></div>
-      <div class="note" id="nellyCap">His ex. Per his own statement, he is <b>completely over her</b>.</div>
+      <div class="note" id="nellyCap" style="text-align:center">His ex. Per his own statement, he is <b>completely over her</b>.</div>
     </div>
 
     <div class="foot">
@@ -377,10 +378,11 @@
     nellyBtn.addEventListener("click",async()=>{
       explode();
       nellyBtn.classList.remove("pop");void nellyBtn.offsetWidth;nellyBtn.classList.add("pop");
+      window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
       try{const r=await fetch(`${API}/api/counter/nelly/add_one`,{method:"POST"});
         if(!r.ok)throw new Error("HTTP "+r.status);const d=await r.json();
-        nellyRender(d.value);toast(`Nelly mention #${d.value} logged`);
-      }catch(e){console.error(e);toast("Write failed — not persisted");}});
+        nellyRender(d.value);
+      }catch(e){console.error(e);}});
 
     if(localStorage.getItem(LS))goLive();
     fetch(`${API}/api/nikolas/stats`).then(r=>r.ok?r.json():Promise.reject(r.status))
