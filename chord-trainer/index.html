@@ -10,6 +10,11 @@
     .chord-notes { font-size: 20px; color: var(--accent); font-weight: 600; letter-spacing: .12em; }
     .counter { color: var(--muted); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
     #piano { margin-top: 6px; }
+    .cycle { display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 2px; justify-content: center; }
+    .cycle span { font-size: 14px; font-weight: 600; color: var(--muted); padding: 3px 7px; border-radius: 6px; min-width: 22px; text-align: center; transition: color .12s ease, background .12s ease; }
+    .cycle span.on { color: #fff; background: var(--accent); }
+    .cycle span.nextup { color: var(--accent); outline: 1px dashed var(--accent); }
+    .cycle-label { color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; text-align: center; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -25,6 +30,8 @@
       <div class="chord-name" id="name">Cmaj7</div>
       <div class="chord-notes" id="notes">C E G B</div>
       <div id="piano"></div>
+      <div class="cycle-label">cycle of 4ths</div>
+      <div class="cycle" id="cycle"></div>
     </div>
 
     <div class="row">
@@ -39,6 +46,12 @@
       <span class="switch-text">Show chord on keyboard</span>
     </label>
 
+    <label class="switch">
+      <input type="checkbox" id="inv-mode" />
+      <span class="track"><span class="thumb"></span></span>
+      <span class="switch-text">Voice-led inversions (H2)</span>
+    </label>
+
     <div class="midi" id="midi">
       <span class="dot"></span>
       <span id="midi-text">Looking for MIDI…</span>
@@ -48,7 +61,7 @@
     <div class="hint">
       Play the highlighted chord on your MIDI keyboard (any octave/voicing) to advance automatically.<br />
       <kbd>Space</kbd> or <kbd>→</kbd> next chord &nbsp;·&nbsp; <kbd>←</kbd> previous &nbsp;·&nbsp;
-      chords are shown in <strong>root position</strong> over two octaves from C.
+      chords are shown in <span id="pos-hint">root position over two octaves from C.</span>
     </div>
 
     <p class="hint"><a href="../../">← back to vibedstuff</a></p>
