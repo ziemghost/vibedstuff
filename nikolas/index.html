@@ -156,6 +156,7 @@
       </div>
       <div class="actions">
         <button class="btn primary" id="toggleBtn">Start tracking</button>
+        <button class="btn ghost" id="cancelBtn" hidden style="width:100%;margin-top:10px">Cancel — discard, don't log</button>
       </div>
     </div>
 
@@ -186,7 +187,8 @@
     const $=(id)=>document.getElementById(id);
     const toggleBtn=$("toggleBtn"),timerEl=$("timer"),statusEl=$("status"),
           pill=$("statusPill"),pillTxt=$("pillTxt"),
-          adjustEl=$("adjust"),expLabel=$("expLabel"),minusBtn=$("minus"),plusBtn=$("plus");
+          adjustEl=$("adjust"),expLabel=$("expLabel"),minusBtn=$("minus"),plusBtn=$("plus"),
+          cancelBtn=$("cancelBtn");
     const STEP=5*60*1000;
     const RATE_EUR=29.09;   // Matti's hourly rate
     const BEER_EUR=2.99;    // one Asahi
@@ -233,11 +235,11 @@
       else{timerEl.textContent=clock(el);statusEl.textContent=liveStatus(el/1000);}}
     function tick(){if(!expectedMs())return;paintLive();raf=requestAnimationFrame(tick);}
     function goLive(){timerEl.classList.add("live");pill.classList.add("live");pillTxt.textContent="TRACKING";
-      toggleBtn.textContent="He's here — stop & log";adjustEl.hidden=false;updateExp();
+      toggleBtn.textContent="He's here — stop & log";adjustEl.hidden=false;cancelBtn.hidden=false;updateExp();
       cancelAnimationFrame(raf);tick();}
     function goIdle(){if(expectedMs())return; // a new session started; don't clobber it
       timerEl.classList.remove("live");pill.classList.remove("live");pillTxt.textContent="IDLE";
-      timerEl.textContent="00:00";adjustEl.hidden=true;toggleBtn.textContent="Start tracking";cancelAnimationFrame(raf);
+      timerEl.textContent="00:00";adjustEl.hidden=true;cancelBtn.hidden=true;toggleBtn.textContent="Start tracking";cancelAnimationFrame(raf);
       statusEl.textContent="No active incident. Hit start the moment he's due.";}
 
     function adjust(delta){
@@ -252,6 +254,13 @@
     minusBtn.addEventListener("click",()=>adjust(-STEP));
     plusBtn.addEventListener("click",()=>adjust(+STEP));
 
+    cancelBtn.addEventListener("click",()=>{           // abort a running incident, log nothing
+      if(!expectedMs())return;
+      localStorage.removeItem(LS);
+      goIdle();
+      toast("Tracking cancelled — nothing logged");
+    });
+
     toggleBtn.addEventListener("click",async()=>{
       if(!expectedMs()){                            // START
         localStorage.setItem(LS,String(round5(Date.now())));
@@ -264,7 +273,7 @@
       confetti();
       timerEl.textContent=clock(late);timerEl.classList.remove("live");
       pill.classList.remove("live");pillTxt.textContent="CLOSED";
-      adjustEl.hidden=true;toggleBtn.textContent="Start tracking";
+      adjustEl.hidden=true;cancelBtn.hidden=true;toggleBtn.textContent="Start tracking";
       statusEl.textContent=resultStatus(late/1000);
       toast(`Incident closed · ${fmt(late)} delay`);
       try{const r=await fetch(`${API}/api/nikolas/log`,{method:"POST",
