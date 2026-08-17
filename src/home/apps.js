@@ -5,4 +5,5 @@ export const apps = [
   { slug: "counter", title: "Visit Counter (stateful POC)" },
   { slug: "skarb", title: "For My Skarb 💛" },
   { slug: "nikolas", title: "Is Nikolas Late? ⏱️" },
+  { slug: "jura", title: "Jura Route Finder 🧗" },
 ];

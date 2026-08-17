@@ -7,12 +7,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:jura": "./node_modules/.bin/esbuild jura/main.js --bundle --format=iife --loader:.css=text --alias:@=./src --define:import.meta.env.BASE_URL=\\\"/vibedstuff/\\\" --outfile=/tmp/jura.iife.js --log-level=error && node jura/smoke.test.mjs"
   },
   "dependencies": {
+    "leaflet": "^1.9.4",
     "nexusui": "^2.1.6"
   },
   "devDependencies": {
+    "jsdom": "^30.0.1",
     "vite": "^5.4.10"
   }
 }
