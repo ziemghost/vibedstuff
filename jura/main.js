@@ -2,16 +2,15 @@ import "@/styles/theme.css";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-// Route record layout (kept as arrays so ~10k rows stay small over the wire):
+// Route record layout (arrays, so ~10k rows stay small over the wire):
 // 0 name, 1 grade, 2 gradeIdx, 3 lengthM, 4 rockIdx, 5 areaIdx, 6 region, 7 style,
-// 8 firstAscentYear, 9 protection
-const NAME = 0, GRADE = 1, GIDX = 2, LEN = 3, ROCK = 4, AREA = 5, REG = 6, STY = 7, YEAR = 8, PROT = 9;
-const REGN = ["southern", "middle", "northern", "unclassified"];
-const STYN = ["sport", "trad", "mixed", "unknown"];
+// 8 firstAscentYear, 9 protection, 10 isTraverse
+const NAME = 0, GRADE = 1, GIDX = 2, LEN = 3, ROCK = 4, AREA = 5, REG = 6, STY = 7,
+      YEAR = 8, PROT = 9, TRAV = 10;
 
-// Grade colour ramp. Four bands, matching the legend Portal Górski prints on its own
-// topos, so a colour means the same thing here as on the source. Deliberately not the
-// theme accent — accent means "you selected this", never "this route is hard".
+// Grade colour ramp: the four bands Portal Górski prints on its own topos, so a
+// colour means the same here as on the source. Never the theme accent, which means
+// "you selected this".
 const BANDS = ["--g1", "--g2", "--g3", "--g4"];
 function bandOf(g) {
   if (!g) return -1;
@@ -21,13 +20,73 @@ function bandOf(g) {
   return 0;
 }
 
+const T = {
+  pl: {
+    title: "Drogi wspinaczkowe na Jurze",
+    sub: (r, k, v) => `${r} dróg · ${k} skał · ${v} dolin`,
+    search: "Szukaj drogi, skały lub doliny…",
+    grade: "Wycena", length: "Długość", protection: "Asekuracja",
+    traverses: "Pokaż trawersy", reset: "Wyczyść filtry",
+    regions: ["Cała Jura", "Południowa", "Środkowa", "Północna"],
+    allAreas: "Wszystkie doliny",
+    styles: { sport: "sportowa", trad: "własna", mixed: "mieszana", unknown: "brak danych" },
+    th_route: "Droga", th_grade: "Wycena", th_length: "Długość", th_rock: "Skała",
+    th_area: "Dolina", th_protection: "Asekuracja",
+    maphint: "Jeden znacznik na skałę — wielkość to liczba pasujących dróg, kolor to najtrudniejsza z nich. Kliknij, żeby przypiąć skałę. Przycisk ⌖ pokazuje Twoją pozycję.",
+    count: (n, all, rocks) => `<b>${n}</b> z ${all} dróg · ${rocks} skał`,
+    more: (n) => `Pokaż więcej (zostało ${n})`,
+    empty: "Żadna droga nie pasuje do filtrów.",
+    pinned: (r) => `przypięto: ${r}`,
+    popupRoutes: (n) => `${n} ${n === 1 ? "pasująca droga" : "pasujących dróg"}`,
+    popupHardest: "najtrudniejsza tutaj",
+    you: "Tu jesteś", traverse: "trawers",
+    locTitle: "Pokaż moją pozycję", locDenied: "Brak dostępu do lokalizacji",
+    m: "m",
+  },
+  en: {
+    title: "Jura Route Finder",
+    sub: (r, k, v) => `${r} routes · ${k} rocks · ${v} valleys`,
+    search: "Search route, rock or valley…",
+    grade: "Grade", length: "Length", protection: "Protection",
+    traverses: "Show traverses", reset: "Reset filters",
+    regions: ["All regions", "Southern", "Middle", "Northern"],
+    allAreas: "All valleys",
+    styles: { sport: "sport", trad: "trad", mixed: "mixed", unknown: "unknown" },
+    th_route: "Route", th_grade: "Grade", th_length: "Length", th_rock: "Rock",
+    th_area: "Valley", th_protection: "Protection",
+    maphint: "One marker per rock — size is how many matching routes it has, colour is its hardest. Click to pin a rock. The ⌖ button shows where you are.",
+    count: (n, all, rocks) => `<b>${n}</b> of ${all} routes · ${rocks} rocks`,
+    more: (n) => `Show more (${n} left)`,
+    empty: "No routes match those filters.",
+    pinned: (r) => `pinned to ${r}`,
+    popupRoutes: (n) => `${n} matching route${n === 1 ? "" : "s"}`,
+    popupHardest: "hardest here",
+    you: "You are here", traverse: "traverse",
+    locTitle: "Show my location", locDenied: "Location unavailable",
+    m: "m",
+  },
+};
+const STYLE_KEYS = ["sport", "trad", "mixed", "unknown"];
+
+// Polish is the default; English only when the browser actually asks for English.
+// An explicit choice via the flag buttons is remembered and always wins.
+function pickLang() {
+  const saved = localStorage.getItem("jura.lang");
+  if (saved === "pl" || saved === "en") return saved;
+  const langs = navigator.languages || [navigator.language || ""];
+  return langs.some((l) => /^en\b/i.test(l)) ? "en" : "pl";
+}
+let lang = pickLang();
+const t = () => T[lang];
+
 const el = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const norm = (s) => s.toLowerCase().replace(/ł/g, "l").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const norm = (s) => s.toLowerCase().replace(/ł/g, "l").normalize("NFD").replace(/[̀-ͯ]/g, "");
+const nfmt = (n) => n.toLocaleString(lang === "pl" ? "pl-PL" : "en-GB");
 
-let D, HAY, LADDER, ROCKS, AREAS, COORDS;
+let D, HAY, LADDER, ROCKS, AREAS, COORDS, gLim, lLim;
 const state = {
-  q: "", reg: -1, area: "", styles: { 0: 1, 1: 1, 2: 1, 3: 1 },
+  q: "", reg: -1, area: "", styles: { 0: 1, 1: 1, 2: 1, 3: 1 }, traverses: false,
   g: [0, 0], len: [0, 0], rock: -1, sort: null, dir: 1, shown: 0,
 };
 const PAGE = 150;
@@ -36,30 +95,26 @@ let filtered = [];
 boot();
 
 async function boot() {
-  const res = await fetch(`${import.meta.env.BASE_URL}jura-routes.json`);
-  D = await res.json();
+  D = await (await fetch(`${import.meta.env.BASE_URL}jura-routes.json`)).json();
   LADDER = D.ladder; ROCKS = D.rocks; AREAS = D.areas; COORDS = D.coords;
   HAY = D.routes.map((r) => norm(`${r[NAME]} ${ROCKS[r[ROCK]]} ${AREAS[r[AREA]]}`));
 
   const gs = D.routes.filter((r) => r[GIDX] >= 0).map((r) => r[GIDX]);
   const ls = D.routes.filter((r) => r[LEN] > 0).map((r) => r[LEN]);
-  const gLimits = [Math.min(...gs), Math.max(...gs)];
-  const lLimits = [Math.min(...ls), Math.max(...ls)];
-  state.g = [...gLimits];
-  state.len = [...lLimits];
-
-  el("sub").textContent =
-    `${D.routes.length.toLocaleString("en")} routes · ${ROCKS.length} rocks · ${AREAS.length} valleys`;
+  gLim = [Math.min(...gs), Math.max(...gs)];
+  lLim = [Math.min(...ls), Math.max(...ls)];
+  state.g = [...gLim];
+  state.len = [...lLim];
 
   initMap();
-  buildControls(gLimits, lLimits);
+  buildControls();
+  applyLang();
   render();
 }
 
-function buildControls(gLim, lLim) {
-  ["All regions", "Southern", "Middle", "Northern"].forEach((label, i) => {
+function buildControls() {
+  t().regions.forEach((label, i) => {
     const b = document.createElement("button");
-    b.textContent = label;
     b.setAttribute("aria-pressed", String(i === 0));
     b.onclick = () => {
       state.reg = i - 1;
@@ -78,11 +133,11 @@ function buildControls(gLim, lLim) {
   el("area").onchange = (e) => { state.area = e.target.value; render(); };
   el("q").oninput = (e) => { state.q = norm(e.target.value.trim()); render(); };
 
-  STYN.forEach((s, i) => {
+  STYLE_KEYS.forEach((key, i) => {
     const b = document.createElement("button");
     b.className = "chip";
+    b.dataset.style = key;
     b.setAttribute("aria-pressed", "true");
-    b.textContent = s;
     b.onclick = () => {
       state.styles[i] = state.styles[i] ? 0 : 1;
       b.setAttribute("aria-pressed", String(!!state.styles[i]));
@@ -91,15 +146,16 @@ function buildControls(gLim, lLim) {
     el("styles").appendChild(b);
   });
 
-  wireRange("grange", "g0", "g1", "gvals", gLim, state.g,
-    (v) => LADDER[v] ?? "?", () => render());
-  wireRange("lrange", "l0", "l1", "lvals", lLim, state.len,
-    (v) => `${v} m`, () => render());
+  el("tv").onchange = (e) => { state.traverses = e.target.checked; render(); };
+
+  wireRange("grange", "g0", "g1", "gvals", gLim, state.g, (v) => LADDER[v] ?? "?", render);
+  wireRange("lrange", "l0", "l1", "lvals", lLim, state.len, (v) => `${v} ${t().m}`, render);
 
   el("reset").onclick = () => {
     state.q = ""; el("q").value = "";
     state.reg = -1; state.area = ""; el("area").value = "";
     state.rock = -1;
+    state.traverses = false; el("tv").checked = false;
     [0, 1, 2, 3].forEach((k) => { state.styles[k] = 1; });
     [...el("styles").children].forEach((c) => c.setAttribute("aria-pressed", "true"));
     [...el("regs").children].forEach((c, j) => c.setAttribute("aria-pressed", String(j === 0)));
@@ -122,6 +178,39 @@ function buildControls(gLim, lLim) {
       render();
     };
   });
+
+  [...el("lang").querySelectorAll("button")].forEach((b) => {
+    b.onclick = () => {
+      lang = b.dataset.lang;
+      localStorage.setItem("jura.lang", lang);
+      applyLang();
+      render();
+    };
+  });
+}
+
+function applyLang() {
+  const d = t();
+  document.documentElement.lang = lang;
+  document.title = d.title;
+  document.querySelectorAll("[data-t]").forEach((n) => { n.textContent = d[n.dataset.t]; });
+  document.querySelectorAll("[data-t-ph]").forEach((n) => { n.placeholder = d[n.dataset.tPh]; });
+  document.querySelectorAll("[data-t-aria]").forEach((n) => { n.setAttribute("aria-label", d[n.dataset.tAria]); });
+  [...el("lang").querySelectorAll("button")].forEach((b) =>
+    b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  [...el("regs").children].forEach((b, i) => { b.textContent = d.regions[i]; });
+  [...el("styles").children].forEach((b) => { b.textContent = d.styles[b.dataset.style]; });
+  const first = el("area").querySelector("option[value='']");
+  if (first) first.textContent = d.allAreas;
+  else el("area").insertAdjacentHTML("afterbegin", `<option value="">${esc(d.allAreas)}</option>`);
+  // Prepending an option does not move an existing selection, so the dropdown would
+  // otherwise open showing the first valley instead of "all valleys".
+  el("area").value = state.area;
+  el("sub").textContent = d.sub(nfmt(D.routes.length), ROCKS.length, AREAS.length);
+  if (locBtn) locBtn.title = d.locTitle;
+  // range labels re-render through their own sync
+  el("g0").dispatchEvent(new Event("input", { bubbles: true }));
+  el("l0").dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 /** Two range inputs sharing one track. Thumbs cannot cross; the fill shows the span. */
@@ -145,7 +234,7 @@ function wireRange(wrapId, aId, bId, valId, limits, target, fmt, onChange) {
 }
 
 // ---- map -------------------------------------------------------------------
-let map, layer;
+let map, layer, meLayer, locBtn, watchId = null;
 function initMap() {
   map = L.map("map", { scrollWheelZoom: false }).setView([50.35, 19.6], 9);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -153,6 +242,48 @@ function initMap() {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
   layer = L.layerGroup().addTo(map);
+  meLayer = L.layerGroup().addTo(map);
+
+  const Locate = L.Control.extend({
+    options: { position: "topleft" },
+    onAdd() {
+      locBtn = L.DomUtil.create("button", "locbtn");
+      locBtn.type = "button";
+      locBtn.textContent = "⌖";
+      locBtn.title = t().locTitle;
+      L.DomEvent.disableClickPropagation(locBtn);
+      locBtn.onclick = toggleLocate;
+      return locBtn;
+    },
+  });
+  map.addControl(new Locate());
+}
+
+function toggleLocate() {
+  if (watchId !== null) {                       // second press turns it off again
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    meLayer.clearLayers();
+    locBtn.dataset.state = "";
+    return;
+  }
+  if (!navigator.geolocation) { locBtn.title = t().locDenied; return; }
+  locBtn.dataset.state = "wait";
+  // watchPosition rather than a one-shot read, so the dot tracks you while walking in.
+  watchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      locBtn.dataset.state = "on";
+      meLayer.clearLayers();
+      L.circle([latitude, longitude], { radius: accuracy, color: "#e8590c", weight: 1, fillOpacity: 0.12 }).addTo(meLayer);
+      L.circleMarker([latitude, longitude], {
+        radius: 6, color: "#fff", weight: 2, fillColor: "#e8590c", fillOpacity: 1,
+      }).addTo(meLayer).bindPopup(t().you);
+      if (!toggleLocate.centred) { map.setView([latitude, longitude], 13); toggleLocate.centred = true; }
+    },
+    () => { locBtn.dataset.state = ""; locBtn.title = t().locDenied; watchId = null; },
+    { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 }
+  );
 }
 
 function drawMap() {
@@ -176,10 +307,7 @@ function drawMap() {
       color: colour, weight: state.rock === ri ? 3 : 1.5,
       fillColor: colour, fillOpacity: state.rock === ri ? 0.85 : 0.4,
     }).addTo(layer);
-    m.bindPopup(
-      `<b>${esc(ROCKS[ri])}</b><br>${e.n} matching route${e.n === 1 ? "" : "s"}` +
-      `<br>hardest here: ${esc(LADDER[e.hardest] ?? "—")}`
-    );
+    m.bindPopup(`<b>${esc(ROCKS[ri])}</b><br>${t().popupRoutes(e.n)}<br>${t().popupHardest}: ${esc(LADDER[e.hardest] ?? "—")}`);
     m.on("click", () => { state.rock = state.rock === ri ? -1 : ri; render(); });
   }
 }
@@ -187,16 +315,19 @@ function drawMap() {
 // ---- filtering + table ------------------------------------------------------
 function render() {
   filtered = [];
+  const gNarrow = state.g[0] !== gLim[0] || state.g[1] !== gLim[1];
+  const lNarrow = state.len[0] !== lLim[0] || state.len[1] !== lLim[1];
   for (let i = 0; i < D.routes.length; i++) {
     const r = D.routes[i];
+    if (!state.traverses && r[TRAV]) continue;
     if (state.reg >= 0 && r[REG] !== state.reg) continue;
     if (state.area !== "" && r[AREA] !== +state.area) continue;
     if (state.rock >= 0 && r[ROCK] !== state.rock) continue;
     if (!state.styles[r[STY]]) continue;
-    // Ungraded / unmeasured routes are kept only while that slider is untouched,
-    // otherwise an explicit range would silently include unknowns.
-    if (r[GIDX] < 0 ? isNarrowed("g") : (r[GIDX] < state.g[0] || r[GIDX] > state.g[1])) continue;
-    if (r[LEN] === 0 ? isNarrowed("len") : (r[LEN] < state.len[0] || r[LEN] > state.len[1])) continue;
+    // Ungraded / unmeasured routes drop out only once that slider is actually
+    // narrowed, so an explicit range never silently swallows unknowns.
+    if (r[GIDX] < 0 ? gNarrow : (r[GIDX] < state.g[0] || r[GIDX] > state.g[1])) continue;
+    if (r[LEN] === 0 ? lNarrow : (r[LEN] < state.len[0] || r[LEN] > state.len[1])) continue;
     if (state.q && !HAY[i].includes(state.q)) continue;
     filtered.push(r);
   }
@@ -214,23 +345,10 @@ function render() {
   }
 
   const rocksShown = new Set(filtered.map((r) => r[ROCK])).size;
-  el("count").innerHTML =
-    `<b>${filtered.length.toLocaleString("en")}</b> of ${D.routes.length.toLocaleString("en")} routes · ${rocksShown} rocks`;
-  el("pinned").textContent = state.rock >= 0 ? `pinned to ${ROCKS[state.rock]}` : "";
+  el("count").innerHTML = t().count(nfmt(filtered.length), nfmt(D.routes.length), rocksShown);
+  el("pinned").textContent = state.rock >= 0 ? t().pinned(ROCKS[state.rock]) : "";
   drawMap();
   paint(true);
-}
-
-const limitsCache = {};
-function isNarrowed(which) {
-  const t = which === "g" ? state.g : state.len;
-  const key = which === "g" ? GIDX : LEN;
-  if (!limitsCache[which]) {
-    const vals = D.routes.filter((r) => (key === GIDX ? r[GIDX] >= 0 : r[LEN] > 0)).map((r) => r[key]);
-    limitsCache[which] = [Math.min(...vals), Math.max(...vals)];
-  }
-  const [lo, hi] = limitsCache[which];
-  return t[0] !== lo || t[1] !== hi;
 }
 
 function paint(reset) {
@@ -238,25 +356,25 @@ function paint(reset) {
   if (reset) { body.innerHTML = ""; state.shown = 0; }
   const next = filtered.slice(state.shown, state.shown + PAGE);
   if (!next.length && state.shown === 0) {
-    body.innerHTML = '<tr><td class="empty" colspan="6">No routes match those filters.</td></tr>';
+    body.innerHTML = `<tr><td class="empty" colspan="6">${esc(t().empty)}</td></tr>`;
     more.hidden = true;
     return;
   }
   body.insertAdjacentHTML("beforeend", next.map(rowHtml).join(""));
   state.shown += next.length;
   more.hidden = state.shown >= filtered.length;
-  more.textContent = `Show more (${(filtered.length - state.shown).toLocaleString("en")} left)`;
+  more.textContent = t().more(nfmt(filtered.length - state.shown));
 }
 
 function rowHtml(r) {
   const band = bandOf(r[GRADE]);
   const style = band >= 0 ? ` style="--gc:var(${BANDS[band]})"` : "";
   return `<tr>
-    <td data-c="name">${esc(r[NAME])}${r[YEAR] ? ` <span class="dim">· ${r[YEAR]}</span>` : ""}</td>
+    <td data-c="name">${esc(r[NAME])}${r[YEAR] ? ` <span class="dim">· ${r[YEAR]}</span>` : ""}${r[TRAV] ? ` <span class="tv">${esc(t().traverse)}</span>` : ""}</td>
     <td data-c="grade"><span class="grade"${style}>${esc(r[GRADE]) || "—"}</span></td>
-    <td data-c="len" class="num">${r[LEN] ? `${r[LEN]} m` : "—"}</td>
+    <td data-c="len" class="num">${r[LEN] ? `${r[LEN]} ${t().m}` : "—"}</td>
     <td data-c="rock" class="dim">${esc(ROCKS[r[ROCK]])}</td>
     <td data-c="area" class="dim">${esc(AREAS[r[AREA]])}</td>
-    <td data-c="meta"><span class="style">${STYN[r[STY]]}</span>${r[PROT] ? ` <span class="dim">${esc(r[PROT])}</span>` : ""}</td>
+    <td data-c="meta"><span class="style">${esc(t().styles[STYLE_KEYS[r[STY]]])}</span>${r[PROT] ? ` <span class="dim">${esc(r[PROT])}</span>` : ""}</td>
   </tr>`;
 }

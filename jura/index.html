@@ -1,25 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jura Route Finder</title>
   <style>
-    /* Page-specific layout. Palette, body and controls come from the shared theme;
-       only the grade ramp is new, and it is kept clear of --accent so "hard route"
-       never reads as "selected". */
     :root {
       --g0:#7d8590; --g1:#51cf66; --g2:#4dabf7; --g3:#cc5de8; --g4:#ff6b6b;
       --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
     }
     .shell { max-width: 1240px; margin: 0 auto; padding: 20px 18px 64px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .top { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 4px 0 14px; }
     .top h1 { font-size: 26px; letter-spacing: -.02em; margin: 0; }
     .top .sub { color: var(--muted); font-size: 13px; }
     .back { font-size: 13px; }
 
-    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }
+    .lang { display: inline-flex; gap: 6px; }
+    .lang button {
+      background: var(--control); border: 1px solid var(--control-border); border-radius: 7px;
+      padding: 4px 7px; cursor: pointer; line-height: 0; opacity: .45; transition: opacity .12s ease;
+    }
+    .lang button[aria-pressed="true"] { opacity: 1; border-color: var(--accent); }
+    .lang svg { display: block; width: 26px; height: 17px; border-radius: 2px; }
 
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }
     .filters { padding: 14px; display: grid; gap: 13px; }
     .fline { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .fgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
@@ -34,7 +39,6 @@
     }
     .legend { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: 0 0 7px; }
 
-    /* dual-thumb range: two stacked inputs sharing one track */
     .range { position: relative; height: 30px; }
     .range .track { position: absolute; top: 13px; left: 0; right: 0; height: 4px; border-radius: 3px; background: var(--control-border); }
     .range .fill  { position: absolute; top: 13px; height: 4px; border-radius: 3px; background: var(--accent); }
@@ -50,14 +54,12 @@
       pointer-events: auto; width: 17px; height: 17px; border-radius: 50%;
       background: var(--fg); border: 3px solid var(--accent); cursor: pointer;
     }
-    .rvals { font-family: var(--mono); font-size: 13px; color: var(--fg); margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .rvals { font-family: var(--mono); font-size: 13px; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
     .chip {
       background: var(--control); color: var(--muted); border: 1px solid var(--control-border);
       border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13px; cursor: pointer;
-      display: inline-flex; align-items: center; gap: 8px;
     }
-    .chip .dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
     .chip[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
     .seg { display: inline-flex; border: 1px solid var(--control-border); border-radius: 9px; overflow: hidden; }
     .seg button {
@@ -72,8 +74,14 @@
     .maphint { color: var(--muted); font-size: 12px; margin: 8px 2px 0; }
     .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--fg); }
     .leaflet-popup-content { margin: 11px 13px; font-size: 13px; }
-    .leaflet-popup-content b { font-size: 14px; }
     .leaflet-container { background: #10131a; font: inherit; }
+    .locbtn {
+      background: var(--panel); border: 2px solid rgba(0,0,0,.25); border-radius: 6px;
+      width: 34px; height: 34px; cursor: pointer; color: var(--fg); font-size: 17px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .locbtn[data-state="on"] { color: var(--accent); }
+    .locbtn[data-state="wait"] { opacity: .5; }
 
     .count { font-family: var(--mono); font-size: 13px; color: var(--muted); margin: 18px 2px 9px; font-variant-numeric: tabular-nums; }
     .count b { color: var(--fg); }
@@ -92,6 +100,7 @@
     .grade::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gc, var(--g0)); margin-right: 7px; }
     .dim { color: var(--muted); font-size: 13px; }
     .style { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .tv { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 1px 5px; margin-left: 6px; }
     .more { width: 100%; margin-top: 14px; }
     .empty { padding: 42px; text-align: center; color: var(--muted); }
 
@@ -115,66 +124,88 @@
 </head>
 <body>
   <div class="shell">
-    <a class="back" href="/vibedstuff/">← vibedstuff</a>
+    <div class="topbar">
+      <a class="back" href="/vibedstuff/">← vibedstuff</a>
+      <div class="lang" id="lang" role="group" aria-label="Language / Język">
+        <button data-lang="pl" aria-pressed="true" title="Polski">
+          <svg viewBox="0 0 30 20" aria-hidden="true">
+            <rect width="30" height="10" fill="#fff"/><rect y="10" width="30" height="10" fill="#dc143c"/>
+          </svg>
+        </button>
+        <button data-lang="en" aria-pressed="false" title="English">
+          <svg viewBox="0 0 30 20" aria-hidden="true">
+            <rect width="30" height="20" fill="#012169"/>
+            <path d="M0,0 L30,20 M30,0 L0,20" stroke="#fff" stroke-width="4"/>
+            <path d="M0,0 L30,20 M30,0 L0,20" stroke="#C8102E" stroke-width="2"/>
+            <path d="M15,0 V20 M0,10 H30" stroke="#fff" stroke-width="6"/>
+            <path d="M15,0 V20 M0,10 H30" stroke="#C8102E" stroke-width="3.5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <div class="top">
-      <h1>Jura Route Finder</h1>
-      <span class="sub" id="sub">loading…</span>
+      <h1 data-t="title">Drogi wspinaczkowe na Jurze</h1>
+      <span class="sub" id="sub"></span>
     </div>
 
     <div class="panel filters">
       <div class="fline">
-        <input id="q" type="search" placeholder="Search route, rock or valley…" autocomplete="off" aria-label="Search">
-        <div class="seg" id="regs" role="group" aria-label="Region"></div>
-        <select id="area" aria-label="Valley"><option value="">All valleys</option></select>
+        <input id="q" type="search" autocomplete="off" data-t-ph="search" data-t-aria="search">
+        <div class="seg" id="regs" role="group"></div>
+        <select id="area" aria-label="Dolina"></select>
       </div>
       <div class="fgrid">
         <div>
-          <p class="legend">Grade</p>
+          <p class="legend" data-t="grade">Wycena</p>
           <div class="range" id="grange">
             <div class="track"></div><div class="fill"></div>
-            <input type="range" id="g0" aria-label="Minimum grade">
-            <input type="range" id="g1" aria-label="Maximum grade">
+            <input type="range" id="g0"><input type="range" id="g1">
           </div>
           <div class="rvals" id="gvals"></div>
         </div>
         <div>
-          <p class="legend">Length</p>
+          <p class="legend" data-t="length">Długość</p>
           <div class="range" id="lrange">
             <div class="track"></div><div class="fill"></div>
-            <input type="range" id="l0" aria-label="Minimum length">
-            <input type="range" id="l1" aria-label="Maximum length">
+            <input type="range" id="l0"><input type="range" id="l1">
           </div>
           <div class="rvals" id="lvals"></div>
         </div>
         <div>
-          <p class="legend">Protection</p>
+          <p class="legend" data-t="protection">Asekuracja</p>
           <div class="fline" id="styles"></div>
         </div>
       </div>
       <div class="fline">
-        <button class="linkbtn" id="reset">Reset all filters</button>
+        <label class="switch">
+          <input type="checkbox" id="tv">
+          <span class="track"><span class="thumb"></span></span>
+          <span data-t="traverses">Pokaż trawersy</span>
+        </label>
+        <button class="linkbtn" id="reset" data-t="reset">Wyczyść filtry</button>
         <span class="dim" id="pinned"></span>
       </div>
     </div>
 
     <div id="map"></div>
-    <p class="maphint">One marker per rock — size is how many matching routes it has, colour is its hardest. Click a marker to pin that rock; click it again to unpin.</p>
+    <p class="maphint" data-t="maphint"></p>
 
     <p class="count" id="count"></p>
     <div class="tablewrap">
       <table>
         <thead><tr>
-          <th class="s" data-s="name" aria-sort="none">Route</th>
-          <th class="s" data-s="grade" aria-sort="none">Grade</th>
-          <th class="s num" data-s="len" aria-sort="none">Length</th>
-          <th class="s" data-s="rock" aria-sort="none">Rock</th>
-          <th class="s" data-s="area" aria-sort="none">Valley</th>
-          <th>Protection</th>
+          <th class="s" data-s="name" aria-sort="none" data-t="th_route">Droga</th>
+          <th class="s" data-s="grade" aria-sort="none" data-t="th_grade">Wycena</th>
+          <th class="s num" data-s="len" aria-sort="none" data-t="th_length">Długość</th>
+          <th class="s" data-s="rock" aria-sort="none" data-t="th_rock">Skała</th>
+          <th class="s" data-s="area" aria-sort="none" data-t="th_area">Dolina</th>
+          <th data-t="th_protection">Asekuracja</th>
         </tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
-    <button class="btn more" id="more" hidden>Show more</button>
+    <button class="btn more" id="more" hidden></button>
   </div>
   <script type="module" src="./main.js"></script>
 </body>
