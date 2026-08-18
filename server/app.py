@@ -44,7 +44,8 @@ def init_db():
     con.execute(
         "CREATE TABLE IF NOT EXISTS counters ("
         "  name TEXT PRIMARY KEY,"
-        "  value INTEGER NOT NULL DEFAULT 0"
+        "  value INTEGER NOT NULL DEFAULT 0,"
+        "  created_at TEXT"
         ")"
     )
     con.execute(
@@ -54,6 +55,13 @@ def init_db():
         "  arrived_ms INTEGER NOT NULL,"
         "  late_ms INTEGER NOT NULL,"
         "  created_at TEXT NOT NULL DEFAULT (datetime('now'))"
+        ")"
+    )
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS counter_clicks ("
+        "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  counter_name TEXT NOT NULL,"
+        "  clicked_at TEXT NOT NULL"
         ")"
     )
     con.commit()
@@ -109,8 +117,12 @@ def add_one(name: str, request: Request):
         with _lock:
             con = connect()
             con.execute(
-                "INSERT INTO counters(name, value) VALUES(?, 1) "
+                "INSERT INTO counters(name, value, created_at) VALUES(?, 1, datetime('now')) "
                 "ON CONFLICT(name) DO UPDATE SET value = value + 1",
+                (name,),
+            )
+            con.execute(
+                "INSERT INTO counter_clicks(counter_name, clicked_at) VALUES(?, datetime('now'))",
                 (name,),
             )
             con.commit()
