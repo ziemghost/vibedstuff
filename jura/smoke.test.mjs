@@ -75,7 +75,7 @@ console.log(`   data: ${TOTAL} routes, ${TRAVERSES} traverses\n`);
   ck("first page of rows rendered", d.querySelectorAll("#rows tr").length === 150);
   ck("traverses excluded by default", num() === NON_TRAV, `${num()} vs ${NON_TRAV}`);
   ck("map markers drawn", d.querySelectorAll("#map path").length > 100, `${d.querySelectorAll("#map path").length}`);
-  ck("valley dropdown defaults to 'all'", q("#area").value === "" && /All valleys|Wszystkie/.test(q("#area").selectedOptions[0].textContent),
+  ck("area dropdown defaults to 'all'", q("#area").value === "" && /All areas|Wszystkie rejony/.test(q("#area").selectedOptions[0].textContent),
      `${q("#area").value || "(all)"} / ${q("#area").selectedOptions[0].textContent}`);
 
   q("#tv").checked = true;
@@ -119,6 +119,23 @@ console.log(`   data: ${TOTAL} routes, ${TRAVERSES} traverses\n`);
   await wait();
   ck("reset restores the default view", num() === NON_TRAV, `${num()} vs ${NON_TRAV}`);
 
+  // Pinning: the list narrows, the map does not move or lose markers.
+  const beforeMarkers = d.querySelectorAll("#map path").length;
+  const beforeCount = num();
+  const marker = d.querySelector("#map path");
+  if (marker) {
+    marker.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await wait();
+  }
+  const pinnedCount = num();
+  ck("pinning narrows the list", pinnedCount < beforeCount, `${beforeCount} -> ${pinnedCount}`);
+  ck("pinning leaves the map untouched", d.querySelectorAll("#map path").length === beforeMarkers,
+     `${beforeMarkers} -> ${d.querySelectorAll("#map path").length}`);
+  if (marker) { marker.dispatchEvent(new window.MouseEvent("click", { bubbles: true })); await wait(); }
+  ck("clicking again unpins", num() === beforeCount, `${num()} vs ${beforeCount}`);
+
+  ck("map hint text is gone", !d.querySelector(".maphint"));
+
   const loc = q(".locbtn");
   ck("locate control present", !!loc);
   click(loc);
@@ -135,7 +152,7 @@ console.log(`   data: ${TOTAL} routes, ${TRAVERSES} traverses\n`);
   ck("flag switch flips to Polish", /Drogi wspinaczkowe/.test(d.title), d.title);
   ck("headers relabel to Polish", d.querySelector("th[data-t='th_route']").textContent === "Droga");
   ck("chips relabel to Polish",
-     [...d.querySelectorAll("#styles .chip")].map((c) => c.textContent).join(",") === "sportowa,własna,mieszana,brak danych",
+     [...d.querySelectorAll("#styles .chip")].map((c) => c.textContent).join(",") === "sportowa,trad,mieszana,brak danych",
      [...d.querySelectorAll("#styles .chip")].map((c) => c.textContent).join(","));
   ck("row count survives the switch", num() === NON_TRAV, `${num()}`);
 }

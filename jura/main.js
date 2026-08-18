@@ -23,16 +23,15 @@ function bandOf(g) {
 const T = {
   pl: {
     title: "Drogi wspinaczkowe na Jurze",
-    sub: (r, k, v) => `${r} dróg · ${k} skał · ${v} dolin`,
-    search: "Szukaj drogi, skały lub doliny…",
+    sub: (r, k, v) => `${r} dróg · ${k} skał · ${v} rejonów`,
+    search: "Szukaj drogi, skały lub rejonu…",
     grade: "Wycena", length: "Długość", protection: "Asekuracja",
     traverses: "Pokaż trawersy", reset: "Wyczyść filtry",
     regions: ["Cała Jura", "Południowa", "Środkowa", "Północna"],
-    allAreas: "Wszystkie doliny",
-    styles: { sport: "sportowa", trad: "własna", mixed: "mieszana", unknown: "brak danych" },
+    allAreas: "Wszystkie rejony",
+    styles: { sport: "sportowa", trad: "trad", mixed: "mieszana", unknown: "brak danych" },
     th_route: "Droga", th_grade: "Wycena", th_length: "Długość", th_rock: "Skała",
-    th_area: "Dolina", th_protection: "Asekuracja",
-    maphint: "Jeden znacznik na skałę — wielkość to liczba pasujących dróg, kolor to najtrudniejsza z nich. Kliknij, żeby przypiąć skałę. Przycisk ⌖ pokazuje Twoją pozycję.",
+    th_area: "Rejon", th_protection: "Asekuracja",
     count: (n, all, rocks) => `<b>${n}</b> z ${all} dróg · ${rocks} skał`,
     more: (n) => `Pokaż więcej (zostało ${n})`,
     empty: "Żadna droga nie pasuje do filtrów.",
@@ -45,16 +44,15 @@ const T = {
   },
   en: {
     title: "Jura Route Finder",
-    sub: (r, k, v) => `${r} routes · ${k} rocks · ${v} valleys`,
-    search: "Search route, rock or valley…",
+    sub: (r, k, v) => `${r} routes · ${k} rocks · ${v} areas`,
+    search: "Search route, rock or area…",
     grade: "Grade", length: "Length", protection: "Protection",
     traverses: "Show traverses", reset: "Reset filters",
     regions: ["All regions", "Southern", "Middle", "Northern"],
-    allAreas: "All valleys",
+    allAreas: "All areas",
     styles: { sport: "sport", trad: "trad", mixed: "mixed", unknown: "unknown" },
     th_route: "Route", th_grade: "Grade", th_length: "Length", th_rock: "Rock",
-    th_area: "Valley", th_protection: "Protection",
-    maphint: "One marker per rock — size is how many matching routes it has, colour is its hardest. Click to pin a rock. The ⌖ button shows where you are.",
+    th_area: "Area", th_protection: "Protection",
     count: (n, all, rocks) => `<b>${n}</b> of ${all} routes · ${rocks} rocks`,
     more: (n) => `Show more (${n} left)`,
     empty: "No routes match those filters.",
@@ -91,6 +89,7 @@ const state = {
 };
 const PAGE = 150;
 let filtered = [];
+let mapRoutes = [];
 
 boot();
 
@@ -286,11 +285,18 @@ function toggleLocate() {
   );
 }
 
-function drawMap() {
+let mapSig = null;
+function drawMap(sig) {
   if (!layer) return;
+  // Rebuild only when a filter the map actually reflects has changed. Pinning a rock
+  // is not one of them, so clicking a marker leaves the map completely alone - the
+  // markers keep their identity (and any open popup) instead of being torn down and
+  // recreated underneath your finger on every render.
+  if (sig === mapSig) return;
+  mapSig = sig;
   layer.clearLayers();
   const byRock = new Map();
-  for (const r of filtered) {
+  for (const r of mapRoutes) {
     const c = COORDS[r[ROCK]];
     if (!c) continue;
     let e = byRock.get(r[ROCK]);
@@ -303,9 +309,8 @@ function drawMap() {
     const band = bandOf(LADDER[e.hardest]);
     const colour = css.getPropertyValue(band >= 0 ? BANDS[band] : "--g0").trim();
     const m = L.circleMarker(e.c, {
-      radius: Math.min(16, 4 + Math.sqrt(e.n) * 1.5),
-      color: colour, weight: state.rock === ri ? 3 : 1.5,
-      fillColor: colour, fillOpacity: state.rock === ri ? 0.85 : 0.4,
+      radius: Math.min(8, 2.2 + Math.sqrt(e.n) * 0.55),
+      color: colour, weight: 1, fillColor: colour, fillOpacity: 0.55,
     }).addTo(layer);
     m.bindPopup(`<b>${esc(ROCKS[ri])}</b><br>${t().popupRoutes(e.n)}<br>${t().popupHardest}: ${esc(LADDER[e.hardest] ?? "—")}`);
     m.on("click", () => { state.rock = state.rock === ri ? -1 : ri; render(); });
@@ -315,6 +320,7 @@ function drawMap() {
 // ---- filtering + table ------------------------------------------------------
 function render() {
   filtered = [];
+  mapRoutes = [];
   const gNarrow = state.g[0] !== gLim[0] || state.g[1] !== gLim[1];
   const lNarrow = state.len[0] !== lLim[0] || state.len[1] !== lLim[1];
   for (let i = 0; i < D.routes.length; i++) {
@@ -322,13 +328,14 @@ function render() {
     if (!state.traverses && r[TRAV]) continue;
     if (state.reg >= 0 && r[REG] !== state.reg) continue;
     if (state.area !== "" && r[AREA] !== +state.area) continue;
-    if (state.rock >= 0 && r[ROCK] !== state.rock) continue;
     if (!state.styles[r[STY]]) continue;
     // Ungraded / unmeasured routes drop out only once that slider is actually
     // narrowed, so an explicit range never silently swallows unknowns.
     if (r[GIDX] < 0 ? gNarrow : (r[GIDX] < state.g[0] || r[GIDX] > state.g[1])) continue;
     if (r[LEN] === 0 ? lNarrow : (r[LEN] < state.len[0] || r[LEN] > state.len[1])) continue;
     if (state.q && !HAY[i].includes(state.q)) continue;
+    mapRoutes.push(r);                                  // map ignores the pin
+    if (state.rock >= 0 && r[ROCK] !== state.rock) continue;
     filtered.push(r);
   }
 
@@ -344,10 +351,11 @@ function render() {
     });
   }
 
-  const rocksShown = new Set(filtered.map((r) => r[ROCK])).size;
+  const rocksShown = new Set(mapRoutes.map((r) => r[ROCK])).size;
   el("count").innerHTML = t().count(nfmt(filtered.length), nfmt(D.routes.length), rocksShown);
   el("pinned").textContent = state.rock >= 0 ? t().pinned(ROCKS[state.rock]) : "";
-  drawMap();
+  drawMap(JSON.stringify([state.q, state.reg, state.area, state.styles, state.traverses,
+                          state.g, state.len, lang]));
   paint(true);
 }
 

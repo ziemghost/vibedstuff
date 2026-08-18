@@ -71,7 +71,6 @@
     .linkbtn { background: none; border: 0; color: var(--accent); font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
     #map { height: 420px; border-radius: 12px; overflow: hidden; margin-top: 14px; background: var(--control); }
-    .maphint { color: var(--muted); font-size: 12px; margin: 8px 2px 0; }
     .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--fg); }
     .leaflet-popup-content { margin: 11px 13px; font-size: 13px; }
     .leaflet-container { background: #10131a; font: inherit; }
@@ -153,7 +152,7 @@
       <div class="fline">
         <input id="q" type="search" autocomplete="off" data-t-ph="search" data-t-aria="search">
         <div class="seg" id="regs" role="group"></div>
-        <select id="area" aria-label="Dolina"></select>
+        <select id="area" aria-label="Rejon"></select>
       </div>
       <div class="fgrid">
         <div>
@@ -189,7 +188,6 @@
     </div>
 
     <div id="map"></div>
-    <p class="maphint" data-t="maphint"></p>
 
     <p class="count" id="count"></p>
     <div class="tablewrap">
@@ -199,7 +197,7 @@
           <th class="s" data-s="grade" aria-sort="none" data-t="th_grade">Wycena</th>
           <th class="s num" data-s="len" aria-sort="none" data-t="th_length">Długość</th>
           <th class="s" data-s="rock" aria-sort="none" data-t="th_rock">Skała</th>
-          <th class="s" data-s="area" aria-sort="none" data-t="th_area">Dolina</th>
+          <th class="s" data-s="area" aria-sort="none" data-t="th_area">Rejon</th>
           <th data-t="th_protection">Asekuracja</th>
         </tr></thead>
         <tbody id="rows"></tbody>
