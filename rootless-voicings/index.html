@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rootless Voicings — F Major</title>
+  <style>
+    .key-label { color: var(--muted); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+    .numeral { font-size: 84px; font-weight: 700; line-height: 1; letter-spacing: -.02em; transition: color .12s ease; }
+    .numeral.correct { color: #37b24d; }
+    .answer { display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 52px; justify-content: center; }
+    .answer.hidden > * { visibility: hidden; }
+    .chord-name { font-size: 22px; font-weight: 600; }
+    .chord-notes { font-size: 18px; color: var(--accent); font-weight: 600; letter-spacing: .12em; }
+    .score { color: var(--muted); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+    .score b { color: var(--fg); font-weight: 600; }
+    #piano { margin-top: 2px; }
+    .held { font-size: 13px; color: var(--muted); letter-spacing: .1em; min-height: 18px; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="tabs">
+      <button data-set="all" class="active">all</button>
+      <button data-set="ninths">natural 9ths only</button>
+    </div>
+
+    <div class="card">
+      <div class="key-label">key of F major</div>
+      <div class="numeral" id="numeral">ii9</div>
+      <div class="answer hidden" id="answer">
+        <div class="chord-name" id="name">Gm9</div>
+        <div class="chord-notes" id="notes">Bb D F A</div>
+      </div>
+      <div id="piano"></div>
+      <div class="held" id="held"></div>
+      <div class="score">streak <b id="streak">0</b> &nbsp;·&nbsp; <b id="correct">0</b> right</div>
+    </div>
+
+    <div class="row">
+      <button class="btn" id="reveal">Reveal</button>
+      <button class="btn" id="skip">Skip →</button>
+    </div>
+
+    <label class="switch">
+      <input type="checkbox" id="show-kb" />
+      <span class="track"><span class="thumb"></span></span>
+      <span class="switch-text">Show the voicing on the keyboard when revealed</span>
+    </label>
+
+    <div class="midi" id="midi">
+      <span class="dot"></span>
+      <span id="midi-text">Looking for MIDI…</span>
+      <select id="midi-select" style="display:none"></select>
+    </div>
+
+    <div class="hint">
+      Play the <strong>rootless</strong> voicing of the numeral shown — 3rd, 5th, 7th and 9th, no root.
+      Any inversion, any octave, A or B form, all fine. Playing the root counts as wrong.<br />
+      On <strong>iii</strong> and <strong>viiø</strong> the 9th is a b9, so those take the 9 or leave it off, either passes.<br />
+      <kbd>Space</kbd> skip &nbsp;·&nbsp; <kbd>R</kbd> reveal
+    </div>
+
+    <p class="hint"><a href="../">← back to vibedstuff</a></p>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
