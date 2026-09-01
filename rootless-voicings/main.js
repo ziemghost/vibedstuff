@@ -1,5 +1,4 @@
 import "@/styles/theme.css";
-import { createPiano } from "@/components/piano.js";
 import { createMidi } from "@/lib/midi.js";
 
 // ----- Chord data ---------------------------------------------------------
@@ -71,7 +70,24 @@ const heldEl = document.getElementById("held");
 const pianoEl = document.getElementById("piano");
 
 pianoEl.style.display = "none";
-const piano = createPiano(pianoEl, { lowNote: LOW, highNote: HIGH });
+
+// Loaded on first reveal, not on load. The keyboard is off by default here,
+// and NexusUI opens a Web Audio context as soon as the module is imported, so
+// importing it eagerly would cost every visitor ~130 kB and an audio context
+// for something most of them never open. If the import or the build fails the
+// drill carries on without the optional keyboard.
+let piano = null;
+let pianoBroken = false;
+let pianoLoading = false;
+function ensurePiano() {
+  if (piano || pianoBroken || pianoLoading) return piano;
+  pianoLoading = true;
+  import("@/components/piano.js")
+    .then(({ createPiano }) => { piano = createPiano(pianoEl, { lowNote: LOW, highNote: HIGH }); })
+    .catch((err) => { console.error("keyboard unavailable:", err); pianoBroken = true; })
+    .finally(() => { pianoLoading = false; render(); });
+  return piano;
+}
 
 function refill() {
   const list = SETS[setKey];
@@ -98,12 +114,12 @@ function render() {
   answerEl.classList.toggle("hidden", !revealed);
   streakEl.textContent = streak;
   correctEl.textContent = correctCount;
-  if (revealed && showKb) {
+  if (revealed && showKb && ensurePiano()) {
     pianoEl.style.display = "";
     piano.highlight(voicing(cur.pcs));
   } else {
     pianoEl.style.display = "none";
-    piano.clear();
+    piano?.clear();
   }
 }
 
@@ -178,16 +194,28 @@ function setMidiStatus(on, text) {
   midiTextEl.textContent = text;
 }
 
+// Judge the chord once it has settled, not on every note-on. Grabbing a
+// 5-note chord sends five separate messages, so an immediate check would see
+// the correct 4 notes a millisecond before the root arrived and credit a
+// voicing that did contain the root — exactly what this drill is testing for.
+const SETTLE_MS = 90;
+let settleTimer = null;
+
+function judge() {
+  settleTimer = null;
+  if (!isCorrect()) return;
+  correctCount++;
+  if (!revealed) streak++;
+  flashCorrect();
+  draw();
+}
+
 const midi = createMidi({
   onNoteOn: (note) => {
     held.add(note);
     renderHeld();
-    if (isCorrect()) {
-      correctCount++;
-      if (!revealed) streak++;
-      flashCorrect();
-      draw();
-    }
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(judge, SETTLE_MS);
   },
   onNoteOff: (note) => { held.delete(note); renderHeld(); },
   onDevices: (inputs) => {
