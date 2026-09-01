@@ -37,8 +37,11 @@ const SETS = {
 // Stack the pitch classes in 3-5-7-9 order ascending from the first one at or
 // above FLOOR, which puts every shape in the register these are actually
 // played in.
-const FLOOR = 55;        // G3 — bottom of the usual rootless range
-const LOW = 48;          // C3
+// Same keyboard as the chord trainer: C4-C6, two octaves. Every voicing below
+// fits inside it, so the keys stay full-width instead of being crushed to fit
+// a wider range nothing actually uses.
+const FLOOR = 60;        // C4 — voicings stack up from here
+const LOW = 60;          // C4
 const HIGH = 84;         // C6
 
 function voicing(pcs) {
