@@ -114,7 +114,7 @@ function render() {
   answerEl.classList.toggle("hidden", !revealed);
   streakEl.textContent = streak;
   correctEl.textContent = correctCount;
-  if (revealed && showKb && ensurePiano()) {
+  if (showKb && ensurePiano()) {
     pianoEl.style.display = "";
     piano.highlight(voicing(cur.pcs));
   } else {
@@ -141,6 +141,7 @@ document.getElementById("skip").addEventListener("click", skip);
 
 document.getElementById("show-kb").addEventListener("change", (e) => {
   showKb = e.target.checked;
+  if (showKb) streak = 0;   // same rule as Reveal: looking at it is a peek
   render();
 });
 
@@ -205,7 +206,7 @@ function judge() {
   settleTimer = null;
   if (!isCorrect()) return;
   correctCount++;
-  if (!revealed) streak++;
+  if (!revealed && !showKb) streak++;   // the streak is unaided answers only
   flashCorrect();
   draw();
 }

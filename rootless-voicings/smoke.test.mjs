@@ -187,10 +187,34 @@ ck("keyboard starts hidden", q("#piano").style.display === "none");
   ck("reveal breaks the streak", streak() === 0, String(streak()));
   ck("reveal does not change the question", numeral() === cur);
 
+}
+
+// --- the keyboard toggle stands on its own, no reveal needed ----------------
+{
+  q("#skip").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await wait();
+  ck("fresh question is unrevealed", q("#answer").classList.contains("hidden"));
+
   q("#show-kb").checked = true;
   q("#show-kb").dispatchEvent(new window.Event("change", { bubbles: true }));
+  await wait(400);   // the piano module is imported on first use
+  ck("keyboard shows without revealing", q("#piano").style.display !== "none");
+  ck("keyboard alone does not reveal the name", q("#answer").classList.contains("hidden"));
+  ck("keyboard draws keys", q("#piano").querySelectorAll("rect, path").length > 0,
+     String(q("#piano").querySelectorAll("rect, path").length));
+
+  // With the keyboard up, correct answers stop building the streak.
+  await play(chordFrom(EXPECT[numeral()].pcs));
+  const c0 = correctCount();
+  ck("answers still count with the keyboard up", c0 > 0, String(c0));
+  ck("but the streak stays at zero", streak() === 0, String(streak()));
+
+  q("#show-kb").checked = false;
+  q("#show-kb").dispatchEvent(new window.Event("change", { bubbles: true }));
   await wait();
-  ck("keyboard appears once revealed", q("#piano").style.display !== "none");
+  ck("keyboard hides again", q("#piano").style.display === "none");
+  await play(chordFrom(EXPECT[numeral()].pcs));
+  ck("streak resumes once it is off", streak() === 1, String(streak()));
 }
 
 // --- skip --------------------------------------------------------------------
