@@ -6,6 +6,7 @@
   const GAP = 256;
   const MAX_ZOOM = 8;
   const PRELOAD = 2;
+  const SEEK_STEP = 5;
   const FIT = 0.94;
   const VIDEO_EXT = new Set(["webm", "mp4"]);
   const POST_SEL = "article.post-preview, article[data-id], .post-preview[data-id]";
@@ -300,7 +301,7 @@
     hudZoom = document.createElement("span");
     hudZoom.className = "e6g-zoom";
     const hint = document.createElement("span");
-    hint.textContent = "← → move · wheel zoom · t tags · 0 reset · esc close";
+    hint.textContent = "← → move · ↑ ↓ seek 5s · wheel zoom · t tags · 0 reset · esc close";
     hud.append(hudPos, hudLink, hudZoom, hint);
     root.appendChild(hud);
 
@@ -646,6 +647,12 @@
       case "0":
         resetZoom();
         break;
+      case "ArrowUp":
+        seek(SEEK_STEP);
+        break;
+      case "ArrowDown":
+        seek(-SEEK_STEP);
+        break;
       case "t":
       case "T":
         toggleTags();
@@ -655,6 +662,23 @@
     }
     e.preventDefault();
     e.stopPropagation();
+  }
+
+  // Up/down nudge the active video. A paused post stays paused; only the playhead moves.
+  function seek(delta) {
+    const s = slides[index];
+    if (!s || !s.video) return;
+    const v = s.video;
+    const d = v.duration;
+    if (!Number.isFinite(d) || d <= 0) return;
+    let t = v.currentTime + delta;
+    // Everything here loops, so running off either end wraps rather than sticking.
+    t = ((t % d) + d) % d;
+    try {
+      v.currentTime = t;
+    } catch (_) {
+      /* not seekable yet */
+    }
   }
 
   function resetZoom() {

@@ -12,6 +12,8 @@ scrollable gallery.
   image, gif, or webm/mp4 — for the active post and two either side.
 - **← / →** move one post. `Home` / `End` jump to the ends, `0` resets zoom, `Esc` closes.
   Clicking a visible neighbour jumps to it.
+- **↑ / ↓** jump the active video forward / back 5 seconds. Short clips wrap round, and a
+  paused video stays paused — only the playhead moves. On a still image they do nothing.
 - **Wheel** zooms the active post about the cursor. Zooming out stops at the size the post
   loaded at, so the fitted view is the furthest out you can go. Drag to pan once zoomed in.
 - The page behind the overlay scrolls so the post you are viewing is where you left off
