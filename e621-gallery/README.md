@@ -23,6 +23,10 @@ scrollable gallery.
   stay paused if you come back. Pausing one by hand sticks for the same reason.
 - Arrowing past the last post loads the next page of results and opens at its first post;
   arrowing left off the first post goes back a page and opens at its last post.
+- A **heart** button (or `b`) adds the post to your e621 favourites, and removes it again.
+  These are real favourites on your account, not a list held inside the extension, so they
+  show up on the site as normal. It needs you to be logged in; if you are not, the heart
+  says so instead of pretending. A failed call puts the heart back where it was.
 - A **tags** button (or `t`) opens a panel listing the current post's tags grouped by
   category, coloured the way e621 colours them. Each tag has **+** and **−**: `+` adds it to
   the search, `−` adds it negated, and either one reloads the listing with the new filter.
@@ -56,6 +60,10 @@ necessarily full resolution" means here. Gifs and videos always use the original
 because their samples are still frames.
 
 ## Notes
+
+- Favourite state is read from the listing's `data-is-favorited` attribute, so it normally
+  costs nothing. Only if that attribute is missing does it fall back to one
+  `/posts/{id}.json` call, and only for the post on screen — never for the neighbours.
 
 - Ctrl/middle/shift-click still open a post in a new tab as normal.
 - Audible autoplay can be refused by Firefox's autoplay policy. If that happens the video

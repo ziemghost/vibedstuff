@@ -21,8 +21,9 @@
   let slides = [];
   let index = 0;
   let isOpen = false;
-  let root, track, hudPos, hudZoom, hudLink, mutedHint, panel, panelBody, tagsBtn;
+  let root, track, hudPos, hudZoom, hudLink, toastEl, panel, panelBody, tagsBtn, favBtn;
   let tagToken = 0;
+  let favToken = 0;
 
   // ---------------------------------------------------------------- posts
 
@@ -95,6 +96,90 @@
       p.tags = raw ? { general: raw.split(/\s+/).filter(Boolean) } : {};
     }
     return p.tags;
+  }
+
+  // ------------------------------------------------------------ favourites
+
+  const csrf = () => {
+    const m = document.querySelector('meta[name="csrf-token"]');
+    return m ? m.content : null;
+  };
+
+  function readFav(p) {
+    if (typeof p.fav === "boolean") return p.fav;
+    const raw = p.el && p.el.dataset.isFavorited;
+    if (raw === "true" || raw === "false") {
+      p.fav = raw === "true";
+      return p.fav;
+    }
+    return null;
+  }
+
+  // Only ever resolved for the post on screen, so browsing does not cost a call per post.
+  async function ensureFav(p) {
+    const known = readFav(p);
+    if (known !== null) return known;
+    const post = await fetchPost(p);
+    p.fav = Boolean(post && post.is_favorited);
+    return p.fav;
+  }
+
+  async function toggleFav() {
+    const p = posts[index];
+    if (!p || !p.id) return;
+    const token = csrf();
+    if (!token) {
+      toast("log in to e621 to use favourites");
+      return;
+    }
+    const want = !readFav(p);
+    p.fav = want; // optimistic; reverted below if the server disagrees
+    paintFav();
+    try {
+      const res = want
+        ? await fetch("/favorites.json", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRF-Token": token,
+            Accept: "application/json",
+          },
+          body: `post_id=${encodeURIComponent(p.id)}`,
+        })
+        : await fetch(`/favorites/${encodeURIComponent(p.id)}.json`, {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: { "X-CSRF-Token": token, Accept: "application/json" },
+        });
+      // 422 on an add usually means it was already a favourite, which is the state we wanted.
+      if (!res.ok && !(want && res.status === 422)) throw new Error(String(res.status));
+      if (p.el) p.el.dataset.isFavorited = want ? "true" : "false";
+    } catch (err) {
+      p.fav = !want;
+      paintFav();
+      toast(`could not ${want ? "add" : "remove"} the favourite (${err.message})`);
+    }
+  }
+
+  function paintFav() {
+    if (!favBtn) return;
+    const p = posts[index];
+    const state = p ? readFav(p) : null;
+    favBtn.classList.toggle("e6g-on", state === true);
+    favBtn.textContent = state === true ? "\u2665" : "\u2661";
+    favBtn.title = state === true ? "remove from favourites (b)" : "add to favourites (b)";
+  }
+
+  async function updateFav() {
+    const p = posts[index];
+    if (!p) return;
+    paintFav();
+    if (readFav(p) === null) {
+      const token = ++favToken;
+      await ensureFav(p);
+      if (token === favToken) paintFav();
+    }
   }
 
   // ---------------------------------------------------------------- filter
@@ -258,20 +343,21 @@
       attempt.catch(() => {
         // Firefox refused audible autoplay; fall back to muted so something plays.
         s.video.muted = true;
-        showMutedHint();
+        toast("autoplay with sound was blocked — unmute in the player");
         const retry = s.video.play();
         if (retry && retry.catch) retry.catch(() => {});
       });
     }
   }
 
-  let mutedHintTimer = 0;
-  function showMutedHint() {
-    if (!mutedHint) return;
-    mutedHint.hidden = false;
-    clearTimeout(mutedHintTimer);
-    mutedHintTimer = setTimeout(() => {
-      mutedHint.hidden = true;
+  let toastTimer = 0;
+  function toast(msg) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastEl.hidden = true;
     }, 3500);
   }
 
@@ -301,15 +387,14 @@
     hudZoom = document.createElement("span");
     hudZoom.className = "e6g-zoom";
     const hint = document.createElement("span");
-    hint.textContent = "← → move · ↑ ↓ seek 5s · wheel zoom · t tags · 0 reset · esc close";
+    hint.textContent = "← → move · ↑ ↓ seek 5s · wheel zoom · b bookmark · t tags · 0 reset · esc close";
     hud.append(hudPos, hudLink, hudZoom, hint);
     root.appendChild(hud);
 
-    mutedHint = document.createElement("div");
-    mutedHint.className = "e6g-muted-hint";
-    mutedHint.hidden = true;
-    mutedHint.textContent = "autoplay with sound was blocked — unmute in the player";
-    root.appendChild(mutedHint);
+    toastEl = document.createElement("div");
+    toastEl.className = "e6g-toast";
+    toastEl.hidden = true;
+    root.appendChild(toastEl);
 
     panel = document.createElement("aside");
     panel.className = "e6g-panel";
@@ -318,6 +403,16 @@
     panelBody.className = "e6g-panel-body";
     panel.appendChild(panelBody);
     root.appendChild(panel);
+
+    favBtn = document.createElement("button");
+    favBtn.className = "e6g-fav";
+    favBtn.type = "button";
+    favBtn.textContent = "\u2661";
+    favBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleFav();
+    });
+    root.appendChild(favBtn);
 
     tagsBtn = document.createElement("button");
     tagsBtn.className = "e6g-tags-toggle";
@@ -450,6 +545,7 @@
     center(true);
     syncBackground();
     updateHud();
+    updateFav();
     renderTags();
     for (let d = 0; d <= PRELOAD; d++) {
       loadMedia(index + d);
@@ -653,6 +749,10 @@
       case "ArrowDown":
         seek(-SEEK_STEP);
         break;
+      case "b":
+      case "B":
+        toggleFav();
+        break;
       case "t":
       case "T":
         toggleTags();
@@ -733,6 +833,7 @@
       /* storage blocked */
     }
     toggleTags(wantPanel);
+    updateFav();
     for (let d = 0; d <= PRELOAD; d++) {
       loadMedia(index + d);
       loadMedia(index - d);
