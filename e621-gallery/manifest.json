@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "e621 pop-out gallery",
+  "version": "1.0.0",
+  "description": "Click a post to open it in a horizontally scrollable gallery: arrow keys to move, wheel to zoom, neighbours visible 256px apart.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "e621-gallery@mtizim",
+      "strict_min_version": "115.0"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://e621.net/*", "*://e926.net/*"],
+      "js": ["content.js"],
+      "css": ["gallery.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
