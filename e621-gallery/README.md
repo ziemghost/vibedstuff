@@ -9,7 +9,8 @@ scrollable gallery.
 - Slides sit in one horizontal row with **256px of empty space** between them, so the
   neighbouring posts are visible either side of the one you are looking at.
 - Every slide starts as its thumbnail and upgrades to the real media — sample-resolution
-  image, gif, or webm/mp4 — for the active post and two either side.
+  image, gif, or webm/mp4 — for the active post and its two immediate neighbours, and
+  nothing further out. Moving one post along fetches exactly one new file.
 - **← / →** move one post. `Home` / `End` jump to the ends, `0` resets zoom, `Esc` closes.
   Clicking a visible neighbour jumps to it.
 - **↑ / ↓** jump the active video forward / back 5 seconds. Short clips wrap round, and a

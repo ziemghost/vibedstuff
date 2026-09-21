@@ -5,7 +5,7 @@
 
   const GAP = 256;
   const MAX_ZOOM = 8;
-  const PRELOAD = 2;
+  const PRELOAD = 1; // immediate neighbours only
   const SEEK_STEP = 5;
   const FIT = 0.94;
   const VIDEO_EXT = new Set(["webm", "mp4"]);
