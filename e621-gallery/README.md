@@ -20,6 +20,12 @@ scrollable gallery.
   stay paused if you come back. Pausing one by hand sticks for the same reason.
 - Arrowing past the last post loads the next page of results and opens at its first post;
   arrowing left off the first post goes back a page and opens at its last post.
+- A **tags** button (or `t`) opens a panel listing the current post's tags grouped by
+  category, coloured the way e621 colours them. Each tag has **+** and **−**: `+` adds it to
+  the search, `−` adds it negated, and either one reloads the listing with the new filter.
+  Clicking the side a tag is already on removes it again. Other search terms, including
+  metatags like `order:score`, are kept; the page number is reset. The panel's open/closed
+  state is remembered.
 
 ## Install
 

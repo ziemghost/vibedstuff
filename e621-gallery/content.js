@@ -10,6 +10,8 @@
   const VIDEO_EXT = new Set(["webm", "mp4"]);
   const POST_SEL = "article.post-preview, article[data-id], .post-preview[data-id]";
   const RESUME_KEY = "__e6g_resume";
+  const PANEL_KEY = "__e6g_tags_open";
+  const CATEGORIES = ["artist", "copyright", "character", "species", "general", "meta", "lore", "invalid"];
 
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const px = (n) => `${Math.round(n * 100) / 100}px`;
@@ -18,7 +20,8 @@
   let slides = [];
   let index = 0;
   let isOpen = false;
-  let root, track, hudPos, hudZoom, hudLink, mutedHint;
+  let root, track, hudPos, hudZoom, hudLink, mutedHint, panel, panelBody, tagsBtn;
+  let tagToken = 0;
 
   // ---------------------------------------------------------------- posts
 
@@ -51,28 +54,78 @@
     return p.sample || p.full;
   }
 
-  // The markup carries the urls on most pages; this fills the gaps without a request per post.
-  async function ensureUrls(p) {
-    if (mediaUrl(p) || p.asked || !p.id) return;
-    p.asked = true;
-    try {
-      const r = await fetch(`/posts/${p.id}.json`, {
-        credentials: "same-origin",
-        headers: { Accept: "application/json" },
-      });
-      if (!r.ok) return;
-      const body = await r.json();
-      const post = body.post || body;
-      if (!post || !post.file) return;
-      p.ext = String(post.file.ext || p.ext).toLowerCase();
-      p.full = post.file.url || p.full;
-      p.sample = (post.sample && post.sample.url) || p.sample;
-      p.preview = (post.preview && post.preview.url) || p.preview;
-      p.w = post.file.width || p.w;
-      p.h = post.file.height || p.h;
-    } catch (_) {
-      /* offline or blocked; the thumbnail stays */
+  // One request per post at most, shared by the url and the tag lookups.
+  const postCache = new Map();
+  function fetchPost(p) {
+    if (!p.id) return Promise.resolve(null);
+    if (!postCache.has(p.id)) {
+      postCache.set(
+        p.id,
+        fetch(`/posts/${p.id}.json`, { credentials: "same-origin", headers: { Accept: "application/json" } })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((body) => (body && (body.post || body)) || null)
+          .catch(() => null),
+      );
     }
+    return postCache.get(p.id);
+  }
+
+  // The markup carries the urls on most pages; this fills the gaps.
+  async function ensureUrls(p) {
+    if (mediaUrl(p)) return;
+    const post = await fetchPost(p);
+    if (!post || !post.file) return;
+    p.ext = String(post.file.ext || p.ext).toLowerCase();
+    p.full = post.file.url || p.full;
+    p.sample = (post.sample && post.sample.url) || p.sample;
+    p.preview = (post.preview && post.preview.url) || p.preview;
+    p.w = post.file.width || p.w;
+    p.h = post.file.height || p.h;
+  }
+
+  // data-tags has no categories, so the api is the real source; it is the fallback.
+  async function ensureTags(p) {
+    if (p.tags) return p.tags;
+    const post = await fetchPost(p);
+    if (post && post.tags && typeof post.tags === "object") {
+      p.tags = post.tags;
+    } else {
+      const raw = (p.el && p.el.dataset.tags) || "";
+      p.tags = raw ? { general: raw.split(/\s+/).filter(Boolean) } : {};
+    }
+    return p.tags;
+  }
+
+  // ---------------------------------------------------------------- filter
+
+  function searchTags() {
+    const raw = new URL(location.href).searchParams.get("tags") || "";
+    return raw.split(/\s+/).filter(Boolean);
+  }
+
+  function tagState(tag) {
+    const lc = tag.toLowerCase();
+    for (const t of searchTags()) {
+      if (t.toLowerCase() === lc) return "+";
+      if (t.toLowerCase() === `-${lc}`) return "-";
+    }
+    return null;
+  }
+
+  function applyTag(tag, mode) {
+    const url = new URL(location.href);
+    const lc = tag.toLowerCase();
+    const kept = searchTags().filter((t) => {
+      const bare = (t.startsWith("-") ? t.slice(1) : t).toLowerCase();
+      return bare !== lc;
+    });
+    // Clicking the side a tag is already on removes it again.
+    if (tagState(tag) !== mode) kept.push(mode === "-" ? `-${tag}` : tag);
+    url.pathname = "/posts";
+    if (kept.length) url.searchParams.set("tags", kept.join(" "));
+    else url.searchParams.delete("tags");
+    url.searchParams.delete("page");
+    location.href = url.href;
   }
 
   // ---------------------------------------------------------------- layout
@@ -247,7 +300,7 @@
     hudZoom = document.createElement("span");
     hudZoom.className = "e6g-zoom";
     const hint = document.createElement("span");
-    hint.textContent = "← → move · wheel zoom · 0 reset · esc close";
+    hint.textContent = "← → move · wheel zoom · t tags · 0 reset · esc close";
     hud.append(hudPos, hudLink, hudZoom, hint);
     root.appendChild(hud);
 
@@ -256,6 +309,24 @@
     mutedHint.hidden = true;
     mutedHint.textContent = "autoplay with sound was blocked — unmute in the player";
     root.appendChild(mutedHint);
+
+    panel = document.createElement("aside");
+    panel.className = "e6g-panel";
+    panel.hidden = true;
+    panelBody = document.createElement("div");
+    panelBody.className = "e6g-panel-body";
+    panel.appendChild(panelBody);
+    root.appendChild(panel);
+
+    tagsBtn = document.createElement("button");
+    tagsBtn.className = "e6g-tags-toggle";
+    tagsBtn.type = "button";
+    tagsBtn.textContent = "tags";
+    tagsBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleTags();
+    });
+    root.appendChild(tagsBtn);
 
     const close = document.createElement("button");
     close.className = "e6g-close";
@@ -378,6 +449,7 @@
     center(true);
     syncBackground();
     updateHud();
+    renderTags();
     for (let d = 0; d <= PRELOAD; d++) {
       loadMedia(index + d);
       loadMedia(index - d);
@@ -392,6 +464,83 @@
     const r = p.el.getBoundingClientRect();
     const target = window.scrollY + r.top + r.height / 2 - window.innerHeight / 2;
     window.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+  }
+
+  function toggleTags(force) {
+    if (!panel) return;
+    const open = force === undefined ? panel.hidden : force;
+    panel.hidden = !open;
+    tagsBtn.classList.toggle("e6g-on", open);
+    try {
+      localStorage.setItem(PANEL_KEY, open ? "1" : "0");
+    } catch (_) {
+      /* storage blocked; the toggle just does not persist */
+    }
+    if (open) renderTags();
+  }
+
+  async function renderTags() {
+    if (!panel || panel.hidden) return;
+    const p = posts[index];
+    const token = ++tagToken;
+    panelBody.textContent = "";
+    if (!p) return;
+    const loading = document.createElement("div");
+    loading.className = "e6g-cat";
+    loading.textContent = "loading…";
+    panelBody.appendChild(loading);
+
+    const tags = await ensureTags(p);
+    if (token !== tagToken || panel.hidden) return;
+    panelBody.textContent = "";
+
+    let any = false;
+    for (const cat of CATEGORIES) {
+      const list = tags[cat];
+      if (!Array.isArray(list) || !list.length) continue;
+      any = true;
+      const head = document.createElement("div");
+      head.className = "e6g-cat";
+      head.textContent = cat;
+      panelBody.appendChild(head);
+      for (const tag of list) {
+        panelBody.appendChild(tagRow(tag, cat));
+      }
+    }
+    if (!any) {
+      const empty = document.createElement("div");
+      empty.className = "e6g-cat";
+      empty.textContent = "no tags";
+      panelBody.appendChild(empty);
+    }
+  }
+
+  function tagRow(tag, cat) {
+    const state = tagState(tag);
+    const row = document.createElement("div");
+    row.className = `e6g-tag e6g-cat-${cat}`;
+
+    const mk = (label, mode) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "e6g-pm" + (state === mode ? " e6g-on" : "");
+      b.textContent = label;
+      b.title = (state === mode ? "remove from" : mode === "+" ? "add to" : "exclude from") + " the search";
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        applyTag(tag, mode);
+      });
+      return b;
+    };
+
+    const name = document.createElement("a");
+    name.className = "e6g-tag-name";
+    name.textContent = tag.replace(/_/g, " ");
+    name.href = `/posts?tags=${encodeURIComponent(tag)}`;
+    name.addEventListener("click", (e) => e.stopPropagation());
+
+    row.append(mk("+", "+"), mk("−", "-"), name);
+    return row;
   }
 
   function updateHud() {
@@ -409,6 +558,7 @@
   }
 
   function onWheel(e) {
+    if (panel && !panel.hidden && panel.contains(e.target)) return;
     e.preventDefault();
     const s = slides[index];
     if (!s) return;
@@ -436,6 +586,7 @@
   function onPointerDown(e) {
     const s = slides[index];
     if (!s || e.button !== 0) return;
+    if (panel && !panel.hidden && panel.contains(e.target)) return;
     if (!s.stage.contains(e.target)) return;
     if (e.target.tagName === "VIDEO") return; // leave the player controls alone
     const ox = Math.max(0, (s.fit.w * s.zoom - s.view.w) / 2);
@@ -495,6 +646,10 @@
       case "0":
         resetZoom();
         break;
+      case "t":
+      case "T":
+        toggleTags();
+        break;
       default:
         return;
     }
@@ -547,6 +702,13 @@
     center(false);
     syncBackground();
     updateHud();
+    let wantPanel = false;
+    try {
+      wantPanel = localStorage.getItem(PANEL_KEY) === "1";
+    } catch (_) {
+      /* storage blocked */
+    }
+    toggleTags(wantPanel);
     for (let d = 0; d <= PRELOAD; d++) {
       loadMedia(index + d);
       loadMedia(index - d);

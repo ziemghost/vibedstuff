@@ -146,3 +146,110 @@
 .e6g-muted-hint[hidden] {
   display: none !important;
 }
+
+/* ---- tag panel ---- */
+
+.e6g-tags-toggle {
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  right: 56px;
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font: 13px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.e6g-tags-toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.e6g-tags-toggle.e6g-on {
+  background: #3c6fd4;
+}
+
+.e6g-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  max-width: 80vw;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: rgba(16, 17, 20, 0.97);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  padding: calc(56px + env(safe-area-inset-top, 0px)) 0 24px;
+  font: 13px/1.4 system-ui, sans-serif;
+}
+
+.e6g-panel[hidden] {
+  display: none !important;
+}
+
+.e6g-panel-body {
+  padding: 0 12px;
+}
+
+.e6g-cat {
+  margin: 14px 0 4px;
+  color: #8a8a90;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.e6g-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 0;
+}
+
+.e6g-pm {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  background: transparent;
+  color: #c9c9ce;
+  font: 13px/1 system-ui, sans-serif;
+  cursor: pointer;
+  padding: 0;
+}
+
+.e6g-pm:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.e6g-pm.e6g-on {
+  background: #3c6fd4;
+  border-color: #3c6fd4;
+  color: #fff;
+}
+
+.e6g-tag-name {
+  color: #b4c7d9;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.e6g-tag-name:hover {
+  text-decoration: underline;
+}
+
+.e6g-cat-artist .e6g-tag-name { color: #f2ac08; }
+.e6g-cat-copyright .e6g-tag-name { color: #dd00dd; }
+.e6g-cat-character .e6g-tag-name { color: #00aa00; }
+.e6g-cat-species .e6g-tag-name { color: #ed5d1f; }
+.e6g-cat-general .e6g-tag-name { color: #b4c7d9; }
+.e6g-cat-meta .e6g-tag-name { color: #ffffff; }
+.e6g-cat-lore .e6g-tag-name { color: #228822; }
+.e6g-cat-invalid .e6g-tag-name { color: #ff3d3d; }
