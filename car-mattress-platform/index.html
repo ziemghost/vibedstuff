@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Car Mattress Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#f1f2ee; --panel:#fbfbf8; --ink:#1c211e; --muted:#5b645d; --line:#d5d9d1;
+  --dim:#2355a0; --osb:#d6b173; --pine:#e9cf98; --pine-edge:#b8955a; --warn:#a85a12; --ok:#2e7a46;
+  --scene:#e6e9e2;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#131715; --panel:#1a1f1c; --ink:#e4e8e2; --muted:#9aa49c; --line:#2d3530;
+    --dim:#86aaf0; --warn:#e3a25a; --ok:#6fcf8d; --scene:#1d2320; --pine-edge:#8a6d3c;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#131715; --panel:#1a1f1c; --ink:#e4e8e2; --muted:#9aa49c; --line:#2d3530;
+  --dim:#86aaf0; --warn:#e3a25a; --ok:#6fcf8d; --scene:#1d2320; --pine-edge:#8a6d3c;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Barlow,"Helvetica Neue",Arial,sans-serif;padding-inline:16px;padding-block:24px 48px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:28px}
+h1,h2{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;letter-spacing:.01em;text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.05}
+h2{font-size:22px;margin-bottom:10px}
+.sub{color:var(--muted);margin:6px 0 0;max-width:68ch}
+.mono,code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.88em}
+.verdict{display:grid;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px 20px}
+.pill{display:inline-block;font-family:"Barlow Condensed",sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:14px;padding:2px 10px;border-radius:3px;background:var(--ok);color:var(--bg)}
+.verdict p{margin:0;max-width:72ch}
+.viewer{position:relative;background:var(--scene);border:1px solid var(--line);border-radius:6px;overflow:hidden;height:min(62vh,560px);min-height:340px}
+#three{position:absolute;inset:0}
+.lbl{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600;color:var(--dim);background:var(--panel);border:1px solid var(--line);padding:1px 5px;border-radius:3px;white-space:nowrap;pointer-events:none}
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.controls label{display:flex;gap:8px;align-items:center;cursor:pointer;user-select:none}
+.controls input[type=number]{width:70px;font:inherit;font-family:"JetBrains Mono",monospace;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink)}
+.controls button{font:inherit;font-weight:600;padding:6px 12px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink);cursor:pointer}
+.controls button:hover{border-color:var(--dim)}
+:focus-visible{outline:2px solid var(--dim);outline-offset:2px}
+.hint{color:var(--muted);font-size:14px}
+.two{display:grid;grid-template-columns:1.25fr 1fr;gap:28px;align-items:start}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.drawing{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto}
+.drawing svg{display:block;width:100%;height:auto;min-width:320px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:"Barlow Condensed",sans-serif;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:13px;color:var(--muted)}
+td.n{font-family:"JetBrains Mono",monospace;font-size:14px;white-space:nowrap}
+.notes{display:grid;gap:12px;margin:0;padding:0;list-style:none}
+.notes li{border-left:3px solid var(--warn);padding:2px 0 2px 12px;max-width:75ch}
+.notes li b{display:block}
+.cuts-seq{margin:12px 0 0;padding-left:22px;display:grid;gap:4px;max-width:80ch}
+.shop{background:#fff;color:#111;border:1px solid #999;padding:18px;overflow-x:auto;font-family:"JetBrains Mono",ui-monospace,monospace}
+.shop .hdr{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 24px;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:12px}
+.shop .hdr b{font-family:Barlow,Arial,sans-serif;font-size:20px;letter-spacing:.02em}
+.shop .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:2px 20px;font-size:13px;margin-bottom:12px}
+.shop svg{display:block;width:100%;min-width:640px;height:auto}
+.shop table{margin-top:14px;font-size:14px;min-width:520px}
+.shop th,.shop td{border:1px solid #444;padding:5px 8px;color:#111}
+.shop th{background:#eee;font-family:"JetBrains Mono",monospace;text-transform:none;letter-spacing:0;font-size:12px;color:#111}
+.shop ol{font-size:13px;margin:12px 0 0;padding-left:20px;display:grid;gap:2px}
+.shop-sec .shop{display:none}
+.shop-img{display:block;width:100%;border:1px solid var(--line)}
+body.shoponly{background:#fff;padding:0}
+body.shoponly .wrap{max-width:none;display:block}
+body.shoponly .wrap>*:not(.shop-sec),body.shoponly .shop-sec>*:not(.shop){display:none}
+body.shoponly .shop-sec .shop{display:block;border:0;padding:28px}
+.stats{display:flex;flex-wrap:wrap;gap:8px 28px;color:var(--muted);font-size:15px}
+.stats span b{color:var(--ink);font-family:"JetBrains Mono",monospace;font-weight:600}
+</style>
+</head><body>
+
+<div class="wrap">
+  <header>
+    <h1>Car Mattress Platform</h1>
+    <p class="sub">A 15 mm OSB-3 top glued onto a frame of battens, to fill a 100 × 106 cm space that is 6 cm deep. All dimensions are in cm. Drag to rotate, scroll or pinch to zoom.</p>
+  </header>
+
+  <section class="verdict">
+    <div><span class="pill">Good enough</span></div>
+    <p>It's more than strong enough. The battens sit on the car floor, so your weight goes straight down through them and nothing is really bending. The only span is the OSB between battens, about <span class="mono" id="vSpan">41</span> cm, and 15 mm OSB-3 handles that easily under a mattress. At 22 kg/cm² the glue lines add up to roughly <span class="mono" id="vGlue">40</span> t of capacity, so the OSB's surface layer would tear before the glue let go.</p>
+    <p>The things to watch are a floor that isn't flat and clamping while the glue cures. See the notes below.</p>
+  </section>
+
+  <section>
+    <div class="viewer"><div id="three" aria-label="3D model of the platform"></div></div>
+  </section>
+
+  <section class="controls">
+    <label><input type="checkbox" id="showBoard" checked> Show OSB top</label>
+    <label><input type="checkbox" id="explode" checked> Lift top off</label>
+    <label><input type="checkbox" id="showDims" checked> Dimensions</label>
+    <input type="hidden" id="bw" value="1.5">
+    <button id="resetView" type="button">Reset view</button>
+    <span class="hint">Battens are 15 mm OSB strips on edge (1.5 thick, 4.5 tall). The frame stops 5 cm short of the board at the far end and 3 cm at the near end.</span>
+  </section>
+
+  <div class="stats" id="stats"></div>
+
+  <section>
+    <h2>Cutting plan: everything from one 250 × 125 sheet</h2>
+    <div class="drawing"><svg id="sheet" role="img" aria-label="Cutting plan for one OSB sheet"></svg></div>
+    <ol class="cuts-seq" id="cutSeq"></ol>
+  </section>
+
+  <div class="two">
+    <section>
+      <h2>Top view, board removed</h2>
+      <div class="drawing"><svg id="plan" role="img" aria-label="Top view of batten layout"></svg></div>
+      <h2 style="margin-top:22px">Section across the width</h2>
+      <div class="drawing"><svg id="section" role="img" aria-label="Cross section"></svg></div>
+    </section>
+    <section>
+      <h2>Cut list</h2>
+      <table>
+        <thead><tr><th>Part</th><th>Qty</th><th>Size</th></tr></thead>
+        <tbody id="cuts"></tbody>
+      </table>
+      <h2 style="margin-top:26px">Notes</h2>
+      <ul class="notes">
+        <li><b>OSB strips on edge</b>Rip 4.5 cm strips and stand them on edge, so 1.5 + 4.5 = 6 cm. Glue each strip's narrow edge to the underside of the top. The load is pure compression, so OSB works fine here.</li>
+        <li><b>Check the floor is flat</b>A car floor under a mat is rarely flat. If the platform rocks, glue felt or rubber strip to the bottom of the battens, or shim the low spots.</li>
+        <li><b>Clamp while the glue cures</b>Wood glue needs pressure. Two or three countersunk screws through the top into each batten work as clamps and hold the frame together if the glue ever fails from heat.</li>
+        <li><b>5 cm end margin</b>At the far end the frame stops 5 cm short of the board edge, and at the near end 3 cm. The lengthwise battens are 98 cm long.</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="shop-sec">
+    <h2>For the Leroy Merlin cutting desk</h2>
+    <p class="hint" style="margin:0 0 10px">A standard cutting sheet in mm, in Polish, to show at the desk. Ask first what their minimum strip width is: some panel saws won't rip strips as narrow as 45 mm. If they refuse, buy ready-made wooden battens about 45 mm tall instead and only have the top cut.</p>
+    <p style="margin:0 0 10px"><a href="leroy-rozkroj-osb15.png" download="rozkroj-osb15.png">Download the image (PNG)</a></p>
+    <img class="shop-img" data-src="leroy-rozkroj-osb15.png" alt="Cutting sheet for Leroy Merlin" >
+    <div class="shop" id="shop"></div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+<script>
+(function(){
+const W=100, L=106, H=6, T=1.5, M=3, MZ0=5, MZ1=3; // width(X), length(Z), total height, OSB thickness, side margin, end margins
+const BH=H-T; // batten height 4.5
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const r1=v=>Math.round(v*10)/10;
+
+function layout(b){
+  const long=[M, W/2-b/2, W-M-b].map(x=>({x0:x,x1:x+b,z0:MZ0,z1:L-MZ1}));
+  const cross=[];
+  const zs=[MZ0, (MZ0+L-MZ1)/2-b/2, L-MZ1-b];
+  for(const z of zs){
+    cross.push({x0:M+b, x1:W/2-b/2, z0:z, z1:z+b});
+    cross.push({x0:W/2+b/2, x1:W-M-b, z0:z, z1:z+b});
+  }
+  return {long,cross,piece:Math.floor((W/2-b/2-(M+b))*10+1e-6)/10,longLen:L-MZ0-MZ1,span:W/2-b/2-(M+b)};
+}
+
+/* ---------- three.js ---------- */
+const host=document.getElementById('three');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+host.appendChild(renderer.domElement);
+const labels=new THREE.CSS2DRenderer();
+labels.domElement.style.position='absolute';labels.domElement.style.inset='0';labels.domElement.style.pointerEvents='none';
+host.appendChild(labels.domElement);
+
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(35,1,1,2000);
+const controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.target.set(W/2,2,L/2);
+function resetView(){camera.position.set(W/2+95,105,L/2+125);controls.target.set(W/2,2,L/2);controls.update();}
+resetView();
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x8a8a80,0.75));
+const sun=new THREE.DirectionalLight(0xffffff,0.7);sun.position.set(80,160,60);scene.add(sun);
+
+function osbTexture(){
+  const c=document.createElement('canvas');c.width=c.height=512;const g=c.getContext('2d');
+  g.fillStyle='#d2ab6c';g.fillRect(0,0,512,512);
+  const tones=['#c79c58','#e0bd80','#b88c4c','#dcb577','#caa263','#a97d42'];
+  for(let i=0;i<1400;i++){
+    g.save();g.translate(Math.random()*512,Math.random()*512);g.rotate((Math.random()-.5)*0.9);
+    g.fillStyle=tones[i%tones.length];g.globalAlpha=.55+Math.random()*.4;
+    g.fillRect(-18-Math.random()*20,-4-Math.random()*4,36+Math.random()*40,8+Math.random()*8);g.restore();
+  }
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(1.3,1.3);return t;
+}
+const matBoard=[new THREE.MeshLambertMaterial({color:0xc9a466}),new THREE.MeshLambertMaterial({color:0xc9a466}),
+  new THREE.MeshLambertMaterial({map:osbTexture()}),new THREE.MeshLambertMaterial({color:0xc9a466}),
+  new THREE.MeshLambertMaterial({color:0xc9a466}),new THREE.MeshLambertMaterial({color:0xc9a466})];
+const matLong=new THREE.MeshLambertMaterial({color:0xe6c98f});
+const matCross=new THREE.MeshLambertMaterial({color:0xd8b373});
+const edgeMat=new THREE.LineBasicMaterial({color:0x7a5f33});
+
+const board=new THREE.Mesh(new THREE.BoxGeometry(W,T,L),matBoard);
+board.add(new THREE.LineSegments(new THREE.EdgesGeometry(board.geometry),edgeMat));
+scene.add(board);
+
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(W+40,L+40),new THREE.MeshLambertMaterial({color:0x9ca39a,transparent:true,opacity:.25}));
+floor.rotation.x=-Math.PI/2;floor.position.set(W/2,-0.01,L/2);scene.add(floor);
+
+const frame=new THREE.Group();scene.add(frame);
+const dims=new THREE.Group();scene.add(dims);
+
+function boxAt(p,mat){
+  const g=new THREE.BoxGeometry(p.x1-p.x0,BH,p.z1-p.z0);
+  const m=new THREE.Mesh(g,mat);m.position.set((p.x0+p.x1)/2,BH/2,(p.z0+p.z1)/2);
+  m.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),edgeMat));return m;
+}
+function label(text,pos){
+  const d=document.createElement('div');d.className='lbl';d.textContent=text;
+  const o=new THREE.CSS2DObject(d);o.position.copy(pos);return o;
+}
+function dimLine(a,b,text,off){
+  const col=new THREE.Color(css('--dim')||'#2355a0');
+  const m=new THREE.LineBasicMaterial({color:col});
+  const A=a.clone().add(off),B=b.clone().add(off);
+  const pts=[a,A,A,B,B,b];
+  const g=new THREE.BufferGeometry().setFromPoints(pts);
+  const l=new THREE.LineSegments(g,m);dims.add(l);
+  dims.add(label(text,A.clone().lerp(B,.5)));
+}
+function clearGroup(g){while(g.children.length){const c=g.children.pop();c.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.element)o.element.remove();});}}
+
+let lift=18;
+function build(b){
+  const lay=layout(b);
+  clearGroup(frame);clearGroup(dims);
+  lay.long.forEach(p=>frame.add(boxAt(p,matLong)));
+  lay.cross.forEach(p=>frame.add(boxAt(p,matCross)));
+  board.position.set(W/2,BH+T/2+lift,L/2);
+  const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+  const top=H+lift;
+  dimLine(V(0,top,L),V(W,top,L),'100',V(0,0,10));
+  dimLine(V(W,top,0),V(W,top,L),'106',V(10,0,0));
+  dimLine(V(W,0,L),V(W,H,L),'6',V(8,0,8));
+  dimLine(V(0,0,L),V(M,0,L),'3',V(0,0,6));
+  dimLine(V(M+b,0,L),V(W/2-b/2,0,L),r1(lay.piece)+'',V(0,0,6));
+  dimLine(V(0,0,0),V(0,0,MZ0),'5',V(-6,0,0));
+  dimLine(V(0,0,MZ0),V(0,0,L-MZ1),r1(lay.longLen)+'',V(-6,0,0));
+  dimLine(V(0,0,L-MZ1),V(0,0,L),'3',V(-6,0,0));
+  dimLine(V(M,0,MZ0),V(M,BH,MZ0),r1(BH)+'',V(-9,0,-4));
+  dims.visible=document.getElementById('showDims').checked;
+  updateDocs(b,lay);
+}
+
+function resize(){
+  const w=host.clientWidth,h=host.clientHeight;
+  renderer.setSize(w,h);labels.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(host);resize();
+
+function sceneBg(){scene.background=new THREE.Color(css('--scene')||'#e6e9e2');}
+sceneBg();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{sceneBg();build(curB());});
+new MutationObserver(()=>{sceneBg();build(curB());}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+(function loop(){requestAnimationFrame(loop);controls.update();renderer.render(scene,camera);labels.render(scene,camera);})();
+
+/* ---------- controls ---------- */
+const bwIn=document.getElementById('bw');
+function curB(){let v=parseFloat(bwIn.value);if(!isFinite(v))v=1.5;return Math.min(7,Math.max(1,v));}
+bwIn.addEventListener('input',()=>build(curB()));
+document.getElementById('showBoard').addEventListener('change',e=>{board.visible=e.target.checked;});
+document.getElementById('explode').addEventListener('change',e=>{lift=e.target.checked?18:0;build(curB());});
+document.getElementById('showDims').addEventListener('change',e=>{dims.visible=e.target.checked;});
+document.getElementById('resetView').addEventListener('click',resetView);
+
+/* ---------- 2D drawings, cut list, stats ---------- */
+function svgEl(tag,attrs,text){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;return e;}
+function hDim(svg,x0,x1,y,yRef,text,s){
+  const g=svgEl('g',{stroke:'var(--dim)','stroke-width':1,fill:'none'});
+  g.append(svgEl('line',{x1:x0,y1:yRef,x2:x0,y2:y}),svgEl('line',{x1:x1,y1:yRef,x2:x1,y2:y}),svgEl('line',{x1:x0,y1:y,x2:x1,y2:y}));
+  g.append(svgEl('path',{d:`M${x0} ${y-3}l0 6M${x1} ${y-3}l0 6`}));
+  svg.append(g);
+  svg.append(svgEl('text',{x:(x0+x1)/2,y:y-4,'text-anchor':'middle','font-size':s||11,'font-family':'JetBrains Mono, monospace',fill:'var(--dim)'},text));
+}
+function vDim(svg,y0,y1,x,xRef,text){
+  const g=svgEl('g',{stroke:'var(--dim)','stroke-width':1,fill:'none'});
+  g.append(svgEl('line',{x1:xRef,y1:y0,x2:x,y2:y0}),svgEl('line',{x1:xRef,y1:y1,x2:x,y2:y1}),svgEl('line',{x1:x,y1:y0,x2:x,y2:y1}));
+  svg.append(g);
+  const t=svgEl('text',{x:x-5,y:(y0+y1)/2,'text-anchor':'middle','font-size':11,'font-family':'JetBrains Mono, monospace',fill:'var(--dim)',transform:`rotate(-90 ${x-5} ${(y0+y1)/2})`},text);
+  svg.append(t);
+}
+function updateDocs(b,lay){
+  const S=4, ox=50, oy=30; // px per cm, offsets
+  const plan=document.getElementById('plan');plan.innerHTML='';
+  plan.setAttribute('viewBox',`0 0 ${W*S+ox+20} ${L*S+oy+60}`);
+  plan.append(svgEl('rect',{x:ox,y:oy,width:W*S,height:L*S,fill:'none',stroke:'var(--muted)','stroke-dasharray':'5 4'}));
+  const R=(p,fill)=>plan.append(svgEl('rect',{x:ox+p.x0*S,y:oy+p.z0*S,width:(p.x1-p.x0)*S,height:(p.z1-p.z0)*S,fill,stroke:'var(--pine-edge)'}));
+  lay.long.forEach(p=>R(p,'var(--pine)'));
+  lay.cross.forEach(p=>R(p,'var(--osb)'));
+  const by=oy+L*S;
+  hDim(plan,ox,ox+W*S,by+40,by,'100');
+  hDim(plan,ox,ox+M*S,by+18,by,'3');
+  hDim(plan,ox+(M+b)*S,ox+(W/2-b/2)*S,by+18,by,r1(lay.piece)+'');
+  hDim(plan,ox+(W/2+b/2)*S,ox+(W-M-b)*S,by+18,by,r1(lay.piece)+'');
+  hDim(plan,ox+(W-M)*S,ox+W*S,by+18,by,'3');
+  hDim(plan,ox+M*S,ox+(M+b)*S,oy-8,oy+MZ0*S,r1(b)+'',10);
+  vDim(plan,oy,oy+L*S,ox-32,ox,'106');
+  vDim(plan,oy,oy+MZ0*S,ox-12,ox,'5');
+  vDim(plan,oy+MZ0*S,oy+(L-MZ1)*S,ox-12,ox,r1(lay.longLen)+'');
+  vDim(plan,oy+(L-MZ1)*S,oy+L*S,ox-12,ox,'');
+  plan.append(svgEl('text',{x:ox+W/2*S,y:oy+L/2*S,'text-anchor':'middle','font-size':12,'font-family':'Barlow, sans-serif',fill:'var(--muted)'},'dashed = board edge'));
+
+  const S2=4, sx=20, sy=30, sec=document.getElementById('section');sec.innerHTML='';
+  sec.setAttribute('viewBox',`0 0 ${W*S2+sx+70} ${H*S2+sy+40}`);
+  sec.append(svgEl('rect',{x:sx,y:sy,width:W*S2,height:T*S2,fill:'var(--osb)',stroke:'var(--pine-edge)'}));
+  lay.long.forEach(p=>sec.append(svgEl('rect',{x:sx+p.x0*S2,y:sy+T*S2,width:b*S2,height:BH*S2,fill:'var(--pine)',stroke:'var(--pine-edge)'})));
+  sec.append(svgEl('line',{x1:sx-10,y1:sy+H*S2,x2:sx+W*S2+10,y2:sy+H*S2,stroke:'var(--muted)','stroke-dasharray':'3 3'}));
+  const g=svgEl('g',{stroke:'var(--dim)',fill:'none'});
+  const xr=sx+W*S2+14;
+  g.append(svgEl('line',{x1:xr,y1:sy,x2:xr,y2:sy+H*S2}),svgEl('line',{x1:xr+18,y1:sy,x2:xr+18,y2:sy+T*S2}),svgEl('line',{x1:xr+18,y1:sy+T*S2,x2:xr+18,y2:sy+H*S2}));
+  sec.append(g);
+  const tx=(x,y,t)=>sec.append(svgEl('text',{x,y,'font-size':10,'font-family':'JetBrains Mono, monospace',fill:'var(--dim)'},t));
+  tx(xr-4,sy-6,'6');tx(xr+22,sy+T*S2-1,r1(T)+'');tx(xr+22,sy+H*S2,r1(BH)+'');
+  sec.append(svgEl('text',{x:sx,y:sy+H*S2+22,'font-size':11,'font-family':'Barlow, sans-serif',fill:'var(--muted)'},'car floor'));
+  hDim(sec,sx,sx+W*S2,sy-8,sy,'100');
+
+  const totalBatten=3*lay.longLen+lay.cross.length*lay.piece;
+  const cuts=document.getElementById('cuts');
+  cuts.innerHTML=`
+    <tr><td>OSB-3 top, cut from one 250 × 125 sheet</td><td class="n">1</td><td class="n">100 × 106 × ${r1(T)}</td></tr>
+    <tr><td>Lengthwise batten</td><td class="n">3</td><td class="n">${r1(lay.longLen)} × ${r1(b)} × ${r1(BH)}</td></tr>
+    <tr><td>Width batten piece</td><td class="n">${lay.cross.length}</td><td class="n">${r1(lay.piece)} × ${r1(b)} × ${r1(BH)}</td></tr>
+    <tr><td>Total batten length</td><td class="n"></td><td class="n">${r1(totalBatten)} cm</td></tr>
+    <tr><td>Strips ripped at ${r1(BH)} cm (see cutting plan)</td><td class="n">4</td><td class="n">${r1(BH)} × 149.7</td></tr>`;
+  drawSheet(lay);
+  drawShop(lay);
+  const glueArea=b*totalBatten;
+  const kg=W*L*T*0.00062+totalBatten*b*BH*0.00062;
+  document.getElementById('stats').innerHTML=
+    `<span>OSB clear span <b>${r1(lay.span)} cm</b></span><span>Glue contact <b>${Math.round(glueArea)} cm²</b></span><span>Glue capacity <b>≈${Math.round(glueArea*22/1000)} t</b></span><span>Weight <b>≈${Math.round(kg)} kg</b></span>`;
+  document.getElementById('vSpan').textContent=r1(lay.span);
+  document.getElementById('vGlue').textContent=Math.round(glueArea*22/1000);
+}
+
+function drawSheet(lay){
+  const SW=250, SH=125, K=0.3, S=3.2, ox=46, oy=34;
+  const svg=document.getElementById('sheet');svg.innerHTML='';
+  svg.setAttribute('viewBox',`0 0 ${SW*S+ox+30} ${SH*S+oy+44}`);
+  const X=v=>ox+v*S, Y=v=>oy+v*S;
+  const mono={'font-family':'JetBrains Mono, monospace'};
+  const rect=(x,y,w,h,fill,stroke)=>svg.append(svgEl('rect',{x:X(x),y:Y(y),width:w*S,height:h*S,fill,stroke:stroke||'var(--pine-edge)','stroke-width':1}));
+  const txt=(x,y,t,sz,fill)=>svg.append(svgEl('text',Object.assign({x:X(x),y:Y(y),'font-size':sz||10,fill:fill||'var(--ink)','text-anchor':'middle','dominant-baseline':'middle'},mono),t));
+  rect(0,0,SW,SH,'var(--scene)','var(--muted)');
+  rect(0,0,100,106,'var(--osb)');
+  txt(50,49,'TOP',14);txt(50,57,'100 × 106',12);
+  txt(50,106+K+(SH-106-K)/2,'spare 100 × '+r1(SH-106-K),10,'var(--muted)');
+  const x0=100+K, SL=SW-x0;
+  const piece=(x,y,len,name)=>{rect(x,y,len,BH,'var(--pine)');txt(x+len/2,y+BH/2,name+' '+r1(len),8);};
+  for(let i=0;i<4;i++){
+    const y=i*(BH+K);
+    rect(x0,y,SL,BH,'var(--bg)','var(--line)');
+    if(i<3){piece(x0,y,lay.longLen,'lengthwise');piece(x0+lay.longLen+K,y,lay.piece,'width');}
+    else for(let j=0;j<3;j++)piece(x0+j*(lay.piece+K),y,lay.piece,'width');
+  }
+  const sy=4*(BH+K);
+  txt(x0+SL/2,sy+(SH-sy)/2-5,'spare offcut',12,'var(--muted)');
+  txt(x0+SL/2,sy+(SH-sy)/2+5,r1(SL)+' × '+r1(SH-sy),11,'var(--muted)');
+  const cutC='#c2410c';
+  const cut=(x1,y1,x2,y2,n,lx,ly)=>{svg.append(svgEl('line',{x1:X(x1),y1:Y(y1),x2:X(x2),y2:Y(y2),stroke:cutC,'stroke-width':1.6,'stroke-dasharray':'6 3'}));
+    svg.append(svgEl('circle',{cx:X(lx),cy:Y(ly),r:8,fill:cutC}));
+    svg.append(svgEl('text',Object.assign({x:X(lx),y:Y(ly)+0.5,'font-size':10,'font-weight':600,fill:'#fff','text-anchor':'middle','dominant-baseline':'middle'},mono),n));};
+  cut(100,0,100,SH,'1',100,SH/2+14);
+  cut(0,106,100,106,'2',90,106);
+  hDim(svg,X(0),X(SW),oy-14,oy,'250');
+  hDim(svg,X(0),X(100),Y(SH)+22,Y(SH),'100');
+  hDim(svg,X(x0),X(SW),Y(SH)+22,Y(SH),r1(SL));
+  vDim(svg,Y(0),Y(SH),ox-26,ox,'125');
+  vDim(svg,Y(0),Y(106),ox-10,ox,'106');
+  const seq=[
+    'Crosscut the sheet at 100 cm.',
+    'Cut the left piece at 106 cm to get the 100 × 106 top. The 100 × '+r1(SH-106-K)+' strip below it is spare. This puts the sheet\'s strong direction (its 250 cm length) across the battens, which is the direction the OSB spans.',
+    'Rip four '+r1(BH)+' cm strips off the long edge of the '+r1(SL)+' × 125 piece, all '+r1(SL)+' cm long.',
+    'Cut three strips into '+r1(lay.longLen)+' + '+r1(lay.piece)+' (one lengthwise batten and one width piece each), and the fourth into three '+r1(lay.piece)+' cm width pieces.'
+  ];
+  document.getElementById('cutSeq').innerHTML=seq.map(t=>'<li>'+t+'</li>').join('')+'<li style="list-style:none;margin-left:-22px;color:var(--muted);font-size:14px">Assumes a 3 mm saw kerf. The orange dashed lines are the first two cuts. There are 6 width pieces: front, middle and back, 2 each.</li>';
+}
+
+function drawShop(lay){
+  const SW=2500, SH=1250, K=3, TT=Math.round(T*10), S=0.34, ox=60, oy=48;
+  const top={w:1000,h:1060}, bw=Math.round(BH*10), Lb=Math.round(lay.longLen*10), Cb=Math.round(lay.piece*10);
+  const x0=top.w+K, SL=SW-x0, spareH=SH-top.h-K, stripsH=4*bw+4*K;
+  const box=document.getElementById('shop');
+  box.innerHTML=`<div class="hdr" style="flex-direction:column;align-items:flex-start;gap:2px"><span>Numer artykułu: <b>43226022</b></span><span>Płyta OSB-3 15 mm 250x125 cm 3.125 m2 Swiss Krono</span><span>Wymiary w mm · rzaz ${K} mm</span></div>
+  <svg id="shopSvg" viewBox="0 0 ${SW*S+ox+90} ${SH*S+oy+70}"></svg>
+  <table><thead><tr><th>Poz.</th><th>Długość</th><th>Szerokość</th><th>Ilość</th><th>Uwagi</th></tr></thead><tbody>
+  <tr><td>A</td><td>${top.h}</td><td>${top.w}</td><td>1</td><td>blat</td></tr>
+  <tr><td>B</td><td>${Lb}</td><td>${bw}</td><td>3</td><td>listwa</td></tr>
+  <tr><td>C</td><td>${Cb}</td><td>${bw}</td><td>6</td><td>listwa</td></tr>
+  </tbody></table>
+  <ol>
+   <li>Cięcie poprzeczne płyty na ${top.w} mm (① ).</li>
+   <li>Z formatki ${top.w} × ${SH}: cięcie na ${top.h} mm → poz. A (② ).</li>
+   <li>Z formatki ${SL} × ${SH}: 4 pasy po ${bw} mm, dł. ${SL} (③ ).</li>
+   <li>Pasy 1–3: B ${Lb} + C ${Cb}. Pas 4: 3 × C ${Cb} (④ ).</li>
+  </ol>`;
+  const svg=document.getElementById('shopSvg');
+  const X=v=>ox+v*S, Y=v=>oy+v*S, ink='#111', gray='#e9e9e9';
+  const el=(t,a,tx)=>{const e=svgEl(t,a,tx);svg.append(e);return e;};
+  const txt=(x,y,t,sz,anchor,w)=>el('text',{x,y,'font-size':sz||11,'font-family':'JetBrains Mono, monospace',fill:ink,'text-anchor':anchor||'middle','dominant-baseline':'middle','font-weight':w||400},t);
+  const defs=el('defs',{});
+  const pat=svgEl('pattern',{id:'hatch',width:6,height:6,patternUnits:'userSpaceOnUse',patternTransform:'rotate(45)'});
+  pat.append(svgEl('rect',{width:6,height:6,fill:'#fff'}),svgEl('line',{x1:0,y1:0,x2:0,y2:6,stroke:'#bbb','stroke-width':1.2}));defs.append(pat);
+  const rect=(x,y,w,h,fill)=>el('rect',{x:X(x),y:Y(y),width:w*S,height:h*S,fill,stroke:ink,'stroke-width':1});
+  rect(0,0,SW,SH,'url(#hatch)');
+  rect(0,0,top.w,top.h,'#fff');
+  txt(X(top.w/2),Y(top.h/2)-10,'A',22,'middle',700);txt(X(top.w/2),Y(top.h/2)+14,`${top.h} × ${top.w}`,12);
+  txt(X(top.w/2),Y(top.h+K+spareH/2),`reszta ${top.w} × ${spareH}`,10);
+  for(let i=0;i<4;i++){
+    const y=i*(bw+K);
+    const parts=i<3?[['B',Lb],['C',Cb]]:[['C',Cb],['C',Cb],['C',Cb]];
+    let x=x0;
+    for(const [n,len] of parts){rect(x,y,len,bw,'#fff');txt(X(x+len/2),Y(y+bw/2)+0.5,`${n} ${len}`,9);x+=len+K;}
+  }
+  txt(X(x0+SL/2),Y(stripsH+(SH-stripsH)/2),`reszta ${SL} × ${SH-stripsH}`,11);
+  // dimension chains
+  const dH=(a,b,y,ref,t)=>{el('line',{x1:X(a),y1:ref,x2:X(a),y2:y+4,stroke:ink,'stroke-width':.7});el('line',{x1:X(b),y1:ref,x2:X(b),y2:y+4,stroke:ink,'stroke-width':.7});
+    el('line',{x1:X(a),y1:y,x2:X(b),y2:y,stroke:ink,'stroke-width':.8});
+    el('path',{d:`M${X(a)-3} ${y+3}L${X(a)+3} ${y-3}M${X(b)-3} ${y+3}L${X(b)+3} ${y-3}`,stroke:ink,'stroke-width':1.2});
+    txt((X(a)+X(b))/2,y-8,t,11);};
+  const dV=(a,b,x,ref,t)=>{el('line',{x1:ref,y1:Y(a),x2:x-4,y2:Y(a),stroke:ink,'stroke-width':.7});el('line',{x1:ref,y1:Y(b),x2:x-4,y2:Y(b),stroke:ink,'stroke-width':.7});
+    el('line',{x1:x,y1:Y(a),x2:x,y2:Y(b),stroke:ink,'stroke-width':.8});
+    el('path',{d:`M${x-3} ${Y(a)+3}L${x+3} ${Y(a)-3}M${x-3} ${Y(b)+3}L${x+3} ${Y(b)-3}`,stroke:ink,'stroke-width':1.2});
+    const cy=(Y(a)+Y(b))/2;el('text',{x:x-8,y:cy,'font-size':11,'font-family':'JetBrains Mono, monospace',fill:ink,'text-anchor':'middle',transform:`rotate(-90 ${x-8} ${cy})`},t);};
+  dH(0,SW,oy-28,oy,String(SW));
+  dH(0,top.w,Y(SH)+20,Y(SH),String(top.w));
+  dH(x0,SW,Y(SH)+20,Y(SH),String(SL));
+  dV(0,SH,ox-34,ox,String(SH));
+  dV(0,top.h,ox-14,ox,String(top.h));
+  // strip callout
+  const cx=X(SW)+12;
+  el('line',{x1:X(SW),y1:Y(0),x2:cx+6,y2:Y(0),stroke:ink,'stroke-width':.7});
+  el('line',{x1:X(SW),y1:Y(stripsH-K),x2:cx+6,y2:Y(stripsH-K),stroke:ink,'stroke-width':.7});
+  el('line',{x1:cx,y1:Y(0),x2:cx,y2:Y(stripsH-K),stroke:ink,'stroke-width':.8});
+  txt(cx+8,Y(stripsH/2),`4 × ${bw}`,10,'start');
+  // cut numbers
+  const num=(x,y,n)=>{el('circle',{cx:x,cy:y,r:9,fill:'#fff',stroke:ink,'stroke-width':1.2});txt(x,y+.5,n,11,'middle',700);};
+  num(X(top.w+K/2),Y(SH*0.72),'1');num(X(top.w*0.82),Y(top.h+K/2),'2');num(X(x0+SL*0.5),Y(stripsH+K)+10,'3');num(X(x0+Lb+K/2),Y(4*(bw+K))+10,'4');
+}
+
+document.querySelectorAll('img[data-src]').forEach(i=>{i.src=i.dataset.src;});
+if(location.hash==='#shop-only')document.body.classList.add('shoponly');
+build(curB());
+})();
+</script>
+</body></html>
